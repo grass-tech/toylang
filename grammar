@@ -1,0 +1,38 @@
+# 说明
+
+var <VarName> = <Expr>
+              ^
+              |
+            EQUAL
+
+if <Condition> {println('test')}
+                   ^
+                   |
+            BUILTIN_FUNCTION
+elseif <Condition> {println("test elseif")}
+else {println("test else")}
+
+for <VarName> from [INT] to [INT] (step [INT] -> 1) {println(<VarName>)}
+               ^                         ^                   ^
+               |                         |                   |
+             KEYWORD                CHOOSEABLE            CLUSTER
+
+repeat (meet | until) {println('Repeat Again')}
+             ^
+             |
+         Choose One
+
+function <FuncName> {println('enter function')}
+
+# ADDITIONAL:
+    <VarName> ? <Expression> : <Expresssion> 三元表达式
+
+低级Least: Number <- (PLUS | MINUS) -> Number
+中等Middle: Number <- (MUL | DIV) -> Number
+最高High: Number <- (POW | INTEGER_DIV) -> Number
+
+# Token令牌
+! : NOT
+? : WHETHER
+| : OR
+& : AND
