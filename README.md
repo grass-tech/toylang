@@ -35,3 +35,18 @@ A python simple programming language，一个简单的python编程语言
 - () : 表示非必选参数
 - (.*?) -> (.*?) : 表示默认值
 - | ： 表示"或"
+
+## 三元表达式 Ternary Expression
+
+用法
+```
+<VariableName> ? <Expression> : <Expression>
+     ^         ^      ^       ^      ^
+     |         |      |       |      |
+   变量名    触发符  真表达式 真|假  假表达式
+```
+
+示例
+```
+true ? "值为真" : "值为假"
+```
