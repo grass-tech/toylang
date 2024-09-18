@@ -1,18 +1,12 @@
 import re
 import ast
 
-try:
-    import ToyLang.Token as Token
-    import ToyLang.Error as Error
-    import ToyLang.Parser as Parser
-except ModuleNotFoundError:
-    import sys
-    import os
-
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import Token
-    import Parser
-    import Error
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import Token
+import Parser
+import Error
 
 
 class Value:
@@ -407,7 +401,15 @@ class Structure(Value):
         return len(self.elements)
 
     def __repr__(self):
-        return f"{''.join([str(i) for i in self.elements])}"
+        if len(self.elements) > 1:
+            return (f"("
+                    f"{', '.join(
+                        [f'{{(arg{i} = {self.elements[i]})'
+                         f' -> {type(self.elements[i]).__name__}}}'
+                         for i in range(len(self.elements))])}"
+                    f")")
+        else:
+            return f"{''.join([str(x) for x in self.elements])}"
 
 
 # 数组

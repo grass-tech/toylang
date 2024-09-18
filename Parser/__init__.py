@@ -1,15 +1,10 @@
-try:
-    import ToyLang.Token as Token
-    import ToyLang.Error as Error
-    import ToyLang.Interpreter as Interpreter
-except ModuleNotFoundError:
-    import sys
-    import os
+import sys
+import os
 
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import Token
-    import Error
-    import Interpreter
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import Token
+import Error
+import Interpreter
 
 
 class BindOperationNode:
@@ -451,7 +446,6 @@ class Parser:
                     return res.success(ArrayNode(element_nodes, start, end))
                 if isinstance(result.value, Interpreter.Cluster):
                     return res.success(ClusterNode(element_nodes, start, end))
-
         return res.success(NodeType(element_nodes, pos_start, self.current_tok.pos_end.copy()))
 
     def if_expr(self):
