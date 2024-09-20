@@ -302,6 +302,12 @@ class String(Value):
         copy.set_context(self.context)
         return copy
 
+    def is_equals(self, other):
+        if isinstance(other, String):
+            return Number(int(self.value == other.value)), None
+        else:
+            return Number(0), None
+
     def added_to(self, other):
         if isinstance(other, String):
             return String(str(self.value) + str(other.value)), None
@@ -368,6 +374,12 @@ class Structure(Value):
         copy.set_context(self.context)
         return copy
 
+    def is_equals(self, other):
+        if isinstance(other, Structure):
+            return Number(int(self.elements == other.elements)), None
+        else:
+            return Number(0), None
+
     def added_to(self, other):
         if isinstance(self.elements[0], String) and isinstance(other, String):
             return String(str(self.elements[0]) + str(other.value)), None
@@ -423,6 +435,12 @@ class Array(Value):
         else:
             self.elements = str(elements).split(",")
 
+    def is_equals(self, other):
+        if isinstance(other, Array):
+            return Number(int(self.elements == other.elements)), None
+        else:
+            return Number(0), None
+
     def copy(self):
         copy = Array(self.elements)
         copy.set_pos(self.pos_start, self.pos_end)
@@ -466,11 +484,6 @@ class Array(Value):
                 f"The type '{type(self).__name__}' "
                 f"is not supported '{type(self).__name__}' / '{type(other).__name__}'")
 
-    def is_equals(self, other):
-        if not isinstance(other, Array):
-            return Number(0), None
-        return Number(int(str(self.elements) == str(other.elements))), None
-
     def notted(self):
         return Number(0 if bool(self.elements) else 1), None
 
@@ -508,6 +521,12 @@ class Cluster(Value):
         copy.set_pos(self.pos_start, self.pos_end)
         copy.set_context(self.context)
         return copy
+
+    def is_equals(self, other):
+        if isinstance(other, Cluster):
+            return Number(int(self.elements == other.elements)), None
+        else:
+            return Number(0), None
 
     def is_true(self):
         return self.elements != 0
@@ -604,6 +623,12 @@ class Function(BaseFunction):
         copy.set_pos(self.pos_start, self.pos_end)
         return copy
 
+    def is_equals(self, other):
+        if isinstance(other, Function):
+            return Number(1), None
+        else:
+            return Number(0), None
+
     def is_true(self):
         return self.name != 0
 
@@ -647,6 +672,10 @@ class BuiltinFunction(BaseFunction):
         print(str(exec_cft.symbol_table.get('value')))
         return Parser.RTResult().success(Null())
     execute_println.arg_names = ["value"]
+
+    def execute_input(self, exec_cft):
+        return Parser.RTResult().success(String(str(input(str(exec_cft.symbol_table.get('value'))))))
+    execute_input.arg_names = ["value"]
 
     def execute_len(self, exec_cft):
         if exec_cft.symbol_table.get('value').length() == -1:
@@ -705,6 +734,12 @@ class BuiltinFunction(BaseFunction):
         copy.set_pos(self.pos_start, self.pos_end)
         return copy
 
+    def is_equals(self, other):
+        if isinstance(other, BuiltinFunction):
+            return Number(1), None
+        else:
+            return Number(0), None
+
     @staticmethod
     def boolean():
         return Number(1)
@@ -719,6 +754,7 @@ class BuiltinFunction(BaseFunction):
 
 
 println = BuiltinFunction.println = BuiltinFunction("println")
+input_ = BuiltinFunction.input = BuiltinFunction("input")
 len_ = BuiltinFunction.len = BuiltinFunction("len")
 int_ = BuiltinFunction.int = BuiltinFunction("int")
 str_ = BuiltinFunction.str = BuiltinFunction("str")

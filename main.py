@@ -8,6 +8,7 @@ global_symbol_table.set("true", Interpreter.true)
 global_symbol_table.set("false", Interpreter.false)
 
 global_symbol_table.set("println", Interpreter.println)
+global_symbol_table.set("input", Interpreter.input_)
 
 global_symbol_table.set("int", Interpreter.int_)
 global_symbol_table.set("float", Interpreter.float_)

@@ -618,7 +618,7 @@ class Parser:
                         self.current_tok.pos_start, self.current_tok.pos_end.copy(),
                         "expected '{'"))
 
-            body = res.register(self._include_expr(StructureNode, Token.TTP_COMMA))
+            body = res.register(self.expr())
             if res.error: return res
 
             return res.success(RepeatNode(condition_expr, body, str(type_)))
@@ -626,7 +626,7 @@ class Parser:
             return res.failure(
                 Error.InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end.copy(),
-                    "expected type 'Int' or keyword 'until'"))
+                    "expected type 'Int' or keyword 'until' or 'meet'"))
 
     def expr(self):
         res = ParserResult()
