@@ -23,7 +23,7 @@ A python simple programming language，一个简单的python编程语言
 # 语法？Grammar?
 
 |   关键字    |                                               用法                                               |  用途  |
-|:--------:|:----------------------------------------------------------------------------------------------:|:----:|
+|:--------:|:----------------------------------------------------------------------------------------------|:----:|
 |   var    |                                 \<Variable> \= \<Expression*>                                  | 设置变量 |
 |    if    |                      (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                       |  如果  |
 |  elseif  |                      (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                       | 否则如果 |
@@ -34,7 +34,7 @@ A python simple programming language，一个简单的python编程语言
 |  delete  |                                          \<Variable>                                           | 删除变量 |
 
 |  内置函数   |           用法            |    用途    |
-|:-------:|:-----------------------:|:--------:|
+|:-------:|:-----------------------|:--------:|
 | println |  <Expression*> -> Any   | 输出信息到控制台 |
 |  input  | <Expression*> -> String |  读取用户输入  |
 |   int   |  <Expression*> -> INT   | 将值转换为整型  |
