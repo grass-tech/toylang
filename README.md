@@ -25,11 +25,11 @@ A python simple programming language，一个简单的python编程语言
 |   关键字    |                                               用法                                               |
 |:--------:|:----------------------------------------------------------------------------------------------:|
 |   var    |                                 \<Variable> \= \<Expression*>                                  |
-|    if    |                       \<Condition*> \| \<Expression*> {\<CodesCluster>}                        |
-|  elseif  |                       \<Condition*> \| \<Expression*> {\<CodesCluster>}                        |
+|    if    |                       (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                        |
+|  elseif  |                       (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                        |
 |   else   |                                       {\<CodesCluster>}                                        |
 |   for    | \<Variable> from \<Expression*> to \<Expression*> (step \<Expression* -> 1>) {\<CodesCluster>} |
-|  repeat  |                        meet \| until  \<Expression*> {\<CodesCluster>}                         |
+|  repeat  |                        (meet \| until)  \<Expression*> {\<CodesCluster>}                         |
 | function |                               \<FunctionName> {\<CodesCluster>}                                |
 |  delete  |                                          \<Variable>                                           |
 
