@@ -27,6 +27,7 @@ A python simple programming language，一个简单的python编程语言
 | for    | <VariableName> from <Expression*> to <Expression*> (step <Expression* -> 1>) {<CodesCluster>} |
 | repeat | meet \| until  <Expression*> {<CodesCluster>}|
 | function | <FunctionName> {<CodesCluster>} |
+| delete | <Variable> |
 
 - VariableName : 变量名
 - Condition : 条件表达式
@@ -49,4 +50,19 @@ A python simple programming language，一个简单的python编程语言
 示例
 ```
 true ? "值为真" : "值为假"
+```
+
+## 变量别名 Use Variable as another name
+
+用法
+```
+<VariableName> -> <AnotherVaraibleName>
+      ^         ^         ^
+      |         |         |
+被别名的变量    符号     别名变量
+```
+
+示例
+```
+true as True
 ```
