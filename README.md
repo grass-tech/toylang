@@ -33,13 +33,16 @@ A python simple programming language，一个简单的python编程语言
 | function |                               \<FunctionName> {\<CodesCluster>}                                |
 |  delete  |                                          \<Variable>                                           |
 
-- Variable : 变量名
-- Condition : 条件表达式
-- Expression : 普通表达式
-- CodesCluster : 执行代码
-- () : 表示非必选参数
-- (.*?) -> (.*?) : 表示默认值
-- | ： 表示"或"
+- Variable : 变量名 varible name
+- Condition : 条件表达式 condtion expr
+- Expression : 普通表达式 normal expr
+- CodesCluster : 执行代码 execute code
+- {} : 表示填入代码  type code
+- <> : 表示参数  param
+- () : 表示非必选参数 unnessary
+- (left | right) : 表示左边或右边的语法 left or right grammar
+- (.*?) -> (.*?) : 表示默认值  default value
+- | ： 表示"或"  'or'
 
 ## 三元表达式 Ternary Expression
 
