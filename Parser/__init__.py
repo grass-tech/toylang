@@ -101,6 +101,15 @@ class VarAssignNode:
         self.pos_end = self.value_node.pos_end
 
 
+# 操作变量节点
+class DeleteNode:
+    def __init__(self, var_name_tok):
+        self.var_name_tok = var_name_tok
+
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.var_name_tok.pos_end
+
+
 # 条件判断节点
 class IfNode:
     def __init__(self, cases, else_cases):
@@ -231,7 +240,7 @@ class Parser:
             return res.failure(
                 Error.InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end.copy(),
-                    "expected '+', '-', '*', '/', '^', '==', '!=', '<', '>', '<=', '>='"))
+                    "expected '+', '-', '*', '/', '**', '==', '!=', '<', '>', '<=', '>='"))
         return res
 
     def factor(self):
@@ -316,6 +325,17 @@ class Parser:
                         ternary_result.tok.pos_start, ternary_result.tok.pos_end,
                         f"Not supported type '{type(ternary_result.tok.value).__name__}' for 'ternary'"
                     ))
+            elif self.current_tok.type == Token.TTP_AS:
+                res.register_advancement()
+                self.advanced()
+
+                identifier = self.current_tok
+                if res.error: return res
+
+                res.register_advancement()
+                self.advanced()
+                return res.success(VarAssignNode(identifier, VarAccessNode(tok)))
+
             return res.success(VarAccessNode(tok))
 
         # 对结构的判断
@@ -359,6 +379,11 @@ class Parser:
             func_def = res.register(self.func_def())
             if res.error: return res
             return res.success(func_def)
+
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "delete"):
+            delete_expr = res.register(self.delete_expr())
+            if res.error: return res
+            return res.success(DeleteNode(delete_expr))
 
         return res.failure(
             Error.InvalidSyntaxError(
@@ -643,6 +668,24 @@ class Parser:
                     "expected int, float")
             )
         return res.success(node)
+
+    def delete_expr(self):
+        res = ParserResult()
+
+        res.register_advancement()
+        self.advanced()
+        if self.current_tok.type != Token.TTT_IDENTIFIER:
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "lose variable name"
+            ))
+
+        var_name = self.current_tok
+
+        res.register_advancement()
+        self.advanced()
+
+        return res.success(var_name)
 
     # 函数
     def func_def(self):

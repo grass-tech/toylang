@@ -837,6 +837,19 @@ class Interpreter:
                 escape[str(type(value).__name__)],
                 value.get() if isinstance(value, Null) else value))
 
+    @staticmethod
+    def visit_DeleteNode(node, context):
+        res = Parser.RTResult()
+        var_name = node.var_name_tok.value
+        if node.var_name_tok.value not in context.symbol_table.symbols:
+            return res.failure(
+                Error.DefinedError(
+                    node.pos_start, node.pos_end,
+                    f"'{var_name}' is not defined")
+            )
+        context.symbol_table.remove(var_name)
+        return res.success(Null())
+
     def visit_IfNode(self, node, context):
         res = Parser.RTResult()
 

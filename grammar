@@ -22,10 +22,19 @@ repeat (meet | until) {println('Repeat Again')}
              |
          Choose One
 
+delete <Variable>
+           ^
+           |
+     Delete Variable
+
 function <FuncName> {println('enter function')}
 
 # ADDITIONAL:
-    <VarName> ? <Expression> : <Expresssion> 三元表达式
+    <VarName> ? <Expression> : <Expression> 三元表达式 Ternary Expression
+    <VarName> -> <AnotherVarName>  变量别名 Variable as another Name
+              ^
+              |
+          AS Character
 
 低级Least: Number <- (PLUS | MINUS) -> Number
 中等Middle: Number <- (MUL | DIV) -> Number
@@ -36,3 +45,4 @@ function <FuncName> {println('enter function')}
 ? : WHETHER
 | : OR
 & : AND
+-> : AS
