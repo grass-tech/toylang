@@ -673,9 +673,9 @@ class BuiltinFunction(BaseFunction):
         return Parser.RTResult().success(Null())
     execute_println.arg_names = ["value"]
 
-    def execute_input(self, exec_cft):
+    def execute_readline(self, exec_cft):
         return Parser.RTResult().success(String(str(input(str(exec_cft.symbol_table.get('value'))))))
-    execute_input.arg_names = ["value"]
+    execute_readline.arg_names = ["value"]
 
     def execute_len(self, exec_cft):
         if exec_cft.symbol_table.get('value').length() == -1:
@@ -754,7 +754,7 @@ class BuiltinFunction(BaseFunction):
 
 
 println = BuiltinFunction.println = BuiltinFunction("println")
-input_ = BuiltinFunction.input = BuiltinFunction("input")
+readline = BuiltinFunction.readline = BuiltinFunction("readline")
 len_ = BuiltinFunction.len = BuiltinFunction("len")
 int_ = BuiltinFunction.int = BuiltinFunction("int")
 str_ = BuiltinFunction.str = BuiltinFunction("str")
