@@ -32,7 +32,7 @@ A python simple programming language，一个简单的python编程语言
 |  repeat  | (meet \| until)  \<Expression*> {\<CodesCluster>}                                              | 条件循环 |
 | function | \<FunctionName> {\<CodesCluster>}                                                              | 构建函数 |
 |  delete  | \<Variable>                                                                                    | 删除变量 |
-|  return  | \<Expression*>                                                                                 |
+|  return  | \<Expression*>                                                                                 | 函数返回 |
 
 |   内置函数   |           用法            |    用途    |
 |:--------:|:-----------------------:|:--------:|
