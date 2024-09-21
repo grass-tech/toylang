@@ -92,7 +92,7 @@ true ? "值为真" : "值为假"
 示例
 
 ```
-true as True
+true -> True
 ```
 
 # 代码示例 Code Example
