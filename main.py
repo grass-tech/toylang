@@ -37,7 +37,7 @@ def run(syntax):
     # 解释器
     result = interpreter.visit(ast.node, context)
     if not result.error:
-        return None if isinstance(result.value, Interpreter.Null) else result.value
+        return result.value
     else:
         return result.error.as_string()
 
@@ -48,4 +48,12 @@ if __name__ == "__main__":
         if syntax.strip():
             res = run(syntax)
             if res is not None:
-                print(res)
+                try:
+                    if isinstance(res.elements[0], Interpreter.Null):
+                        continue
+                    if len(res.elements) == 1:
+                        print(repr(res.elements[0]))
+                    else:
+                        print(repr(res))
+                except AttributeError:
+                    print(res)

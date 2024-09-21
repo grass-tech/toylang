@@ -145,10 +145,11 @@ class RepeatNode:
 
 # 函数节点
 class FunctionDefinedNode:
-    def __init__(self, var_name_tok, arg_name_tokens, body_node):
+    def __init__(self, var_name_tok, arg_name_tokens, body_node, should_auto_return):
         self.var_name_tok = var_name_tok
         self.arg_name_toks = arg_name_tokens
         self.body_node = body_node
+        self.should_auto_return = should_auto_return
 
         if self.var_name_tok:
             self.pos_start = self.var_name_tok.pos_start
@@ -171,6 +172,16 @@ class CallFunctionNode:
             self.pos_end = self.arg_nodes[len(self.arg_nodes) - 1].pos_end
         else:
             self.pos_end = self.node_to_call.pos_end
+            
+
+# 关键字节点
+# 返回节点
+class ReturnNode:
+    def __init__(self, node_to_return, pos_start, pos_end):
+        self.node_to_return = node_to_return
+        
+        self.pos_start = pos_start
+        self.pos_end = pos_end
 
 
 class ParserResult:
@@ -178,15 +189,24 @@ class ParserResult:
         self.error = None
         self.node = None
 
+        self.last_registered_advance_count = 0
         self.advance_count = 0
+        self.to_reverse_count = 0
 
     def register_advancement(self):
         self.advance_count += 1
 
     def register(self, res):
+        self.last_registered_advance_count = res.advance_count
         self.advance_count += res.advance_count
         if res.error: self.error = res.error
         return res.node
+
+    def try_register(self, res):
+        if res.error:
+            self.to_reverse_count = res.advance_count
+            return None
+        return self.register(res)
 
     def success(self, node):
         self.node = node
@@ -202,18 +222,39 @@ class RTResult:
     def __init__(self):
         self.value = None
         self.error = None
+        self.function_return_value = None
+        self.reset()
+
+    def reset(self):
+        self.value = None
+        self.error = None
+        self.function_return_value = None
 
     def register(self, res):
         if res.error: self.error = res.error
+        self.function_return_value = res.function_return_value
         return res.value
 
     def success(self, value):
+        self.reset()
         self.value = value
         return self
 
+    def success_return(self, value):
+        self.reset()
+        self.function_return_value = value
+        return self
+
     def failure(self, error):
+        self.reset()
         self.error = error
         return self
+
+    def should_return(self):
+        return (
+            self.error or
+            self.function_return_value
+        )
 
 
 class Parser:
@@ -230,12 +271,20 @@ class Parser:
 
     def advanced(self):
         self.tok_idx += 1
-        if self.tok_idx < len(self.tokens):
-            self.current_tok = self.tokens[self.tok_idx]
+        self.update_current_tok()
         return self.current_tok
 
+    def reverse(self, amount=1):
+        self.tok_idx -= amount
+        self.update_current_tok()
+        return self.current_tok
+
+    def update_current_tok(self):
+        if len(self.tokens) > self.tok_idx >= 0:
+            self.current_tok = self.tokens[self.tok_idx]
+
     def parse(self):
-        res = self.expr()
+        res = self.statements()
         if not res.error and self.current_tok.type != Token.TTT_EOF:
             return res.failure(
                 Error.InvalidSyntaxError(
@@ -437,18 +486,18 @@ class Parser:
         self.advanced()
 
         if self.current_tok.type != Token.TTT_EOF:
-            element_nodes.append(res.register(self.expr()))
+            element_nodes.append(res.register(self.statements()))
         if res.error:
             return res.failure(
                     Error.InvalidSyntaxError(
                             pos_start, self.current_tok.pos_end.copy(),
                             f"expected any syntax in {type(self.current_tok).__name__}"))
 
-        while self.current_tok.type == split_tok:
+        while self.current_tok.type in (split_tok, Token.TTT_NEWLINE):
             res.register_advancement()
             self.advanced()
 
-            element_nodes.append(res.register(self.expr()))
+            element_nodes.append(res.register(self.statements()))
             if res.error: return res
 
         self.tokens, self.tok_idx = original_tokens, original_idx
@@ -513,6 +562,7 @@ class Parser:
                 ))
 
             expr = res.register(self.expr())
+
             if res.error: return res
             cases.append((condition, expr))
 
@@ -525,7 +575,7 @@ class Parser:
                     self.current_tok.pos_start, self.current_tok.pos_end.copy(),
                     "expected '{' (after expression)"
                 ))
-            expr = res.register(self.expr())
+            expr = res.register(self.statement())
             if res.error: return res
             else_cases = expr
 
@@ -587,7 +637,7 @@ class Parser:
                 "expected '{' (after expression)"
             ))
 
-        body = res.register(self.expr())
+        body = res.register(self.statement())
         if res.error: return res
 
         return res.success(ForNode(var_name, start_value, end_value, step_value, body))
@@ -618,7 +668,7 @@ class Parser:
                         self.current_tok.pos_start, self.current_tok.pos_end.copy(),
                         "expected '{'"))
 
-            body = res.register(self.expr())
+            body = res.register(self.statement())
             if res.error: return res
 
             return res.success(RepeatNode(condition_expr, body, str(type_)))
@@ -627,6 +677,59 @@ class Parser:
                 Error.InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end.copy(),
                     "expected type 'Int' or keyword 'until' or 'meet'"))
+
+    def statements(self):
+        res = ParserResult()
+        statements = []
+        pos_start = self.current_tok.pos_start.copy()
+
+        while self.current_tok.type == Token.TTT_NEWLINE:
+            res.register_advancement()
+            self.advanced()
+
+        statement = res.register(self.statement())
+        if res.error: return res
+        statements.append(statement)
+
+        more_statements = True
+
+        while True:
+            newline_count = 0
+            while self.current_tok.type == Token.TTT_NEWLINE:
+                res.register_advancement()
+                self.advanced()
+                newline_count += 1
+            if newline_count == 0:
+                more_statements = False
+            if not more_statements: break
+            statement = res.try_register(self.statement())
+            if not statement:
+                self.reverse(res.to_reverse_count)
+                more_statements = False
+                continue
+            statements.append(statement)
+
+        return res.success(ArrayNode(statements, pos_start, self.current_tok.pos_end.copy()))
+
+    def statement(self):
+        res = ParserResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        if self.current_tok.matches(Token.TTT_KEYWORD, "return"):
+            res.register_advancement()
+            self.advanced()
+
+            expr = res.try_register(self.expr())
+            if not expr:
+                self.reverse(res.to_reverse_count)
+            return res.success(ReturnNode(expr, pos_start, self.current_tok.pos_end.copy()))
+
+        expr = res.register(self.expr())
+        if res.error:
+            return res.failure(Error.InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                    "expected 'return', '+', '-', '*', '/', '**', '==', '!=', '<', '>', '<=', '>='"))
+        return res.success(expr)
 
     def expr(self):
         res = ParserResult()
@@ -765,6 +868,7 @@ class Parser:
             var_name_tok,
             arg_name_toks,
             node_to_return,
+            True
         ))
 
     def call(self):
