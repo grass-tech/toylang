@@ -220,7 +220,8 @@ class ParserResult:
     def register(self, res):
         self.last_registered_advance_count = res.advance_count
         self.advance_count += res.advance_count
-        if res.error: self.error = res.error
+        if res.error: 
+            self.error = res.error
         return res.node
 
     def try_register(self, res):
@@ -252,7 +253,8 @@ class RTResult:
         self.function_return_value = None
 
     def register(self, res):
-        if res.error: self.error = res.error
+        if res.error: 
+            self.error = res.error
         self.function_return_value = res.function_return_value
         return res.value
 
@@ -321,7 +323,8 @@ class Parser:
             res.register_advancement()
             self.advanced()
             factor = res.register(self.factor())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(UnaryOperationNode(tok, factor))
 
         return self.power()
@@ -352,7 +355,8 @@ class Parser:
                 self.advanced()
 
                 left_value = res.register(self.expr())
-                if res.error: return res
+                if res.error: 
+                    return res
 
                 if self.current_tok.type != Token.TTP_COLON:
                     return res.failure(Error.InvalidSyntaxError(
@@ -362,7 +366,8 @@ class Parser:
                 self.advanced()
 
                 right_value = res.register(self.expr())
-                if res.error: return res
+                if res.error: 
+                    return res
 
                 var_result = Interpreter.Interpreter().visit(VarAccessNode(tok), self.context)
                 if int(str(var_result.value.boolean())):
@@ -374,10 +379,12 @@ class Parser:
                 if "tok" not in dir(ternary_result):
                     ternary_result = Interpreter.Interpreter().visit(ternary_result, self.context).value
                     error, tokens = Token.Lexer("<shell>", str(ternary_result.value)).make_tokens()
-                    if error is not None: return error.as_string()
+                    if error is not None: 
+                        return error.as_string()
                     parser = Parser(tokens, "<shell>", self.context)
                     ast = parser.parse()
-                    if ast.error: return ast.error.as_string()
+                    if ast.error: 
+                        return ast.error.as_string()
                     ternary_result = ast.node
 
                 if ternary_result.tok.type in (Token.TTT_INT, Token.TTT_FLOAT):
@@ -420,54 +427,63 @@ class Parser:
         # 对结构的判断
         elif tok.type == Token.TTT_STRUCTURE:
             structure_expr = res.register(self._include_expr(StructureNode, Token.TTP_COMMA))
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(structure_expr)
 
         # 数组
         elif tok.type == Token.TTT_ARRAY:
             array_expr = res.register(self._include_expr(ArrayNode, Token.TTP_COMMA))
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(array_expr)
 
         # 代码簇
         elif tok.type == Token.TTT_CLUSTER:
             cluster_expr = res.register(self._include_expr(ClusterNode, Token.TTP_SEMI))
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(cluster_expr)
 
         # 关键字
         # 对if的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "if"):
             if_expr = res.register(self.if_expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(if_expr)
 
         # 对循环的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "for"):
             for_expr = res.register(self.for_expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(for_expr)
 
         elif self.current_tok.matches(Token.TTT_KEYWORD, "repeat"):
             repeat_expr = res.register(self.repeat_expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(repeat_expr)
 
         # 对函数的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "function"):
             func_def = res.register(self.func_def())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(func_def)
 
         elif self.current_tok.matches(Token.TTT_KEYWORD, "delete"):
             delete_expr = res.register(self.delete_expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(DeleteNode(delete_expr))
 
         # 库
         elif self.current_tok.matches(Token.TTT_KEYWORD, "include"):
             include_expr = res.register(self.include_expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(include_expr)
 
         return res.failure(
@@ -494,7 +510,8 @@ class Parser:
             self.advanced()
 
             node = res.register(self.comp_expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(UnaryOperationNode(op_tok, node))
 
         node = res.register(self.bin_op(
@@ -534,7 +551,8 @@ class Parser:
             self.advanced()
 
             element_nodes.append(res.register(self.statements()))
-            if res.error: return res
+            if res.error: 
+                return res
 
         self.tokens, self.tok_idx = original_tokens, original_idx
 
@@ -573,7 +591,8 @@ class Parser:
         self.advanced()
 
         condition = res.register(self.expr())
-        if res.error: return res
+        if res.error: 
+            return res
 
         if self.current_tok.type != Token.TTT_CLUSTER:
             return res.failure(Error.InvalidSyntaxError(
@@ -581,7 +600,8 @@ class Parser:
                 "expected '{' (after expression)"
             ))
         expr = res.register(self.expr())
-        if res.error: return res
+        if res.error: 
+            return res
         cases.append((condition, expr))
 
         while self.current_tok.matches(Token.TTT_KEYWORD, "elseif"):
@@ -589,7 +609,8 @@ class Parser:
             self.advanced()
 
             condition = res.register(self.expr())
-            if res.error: return res
+            if res.error: 
+                return res
 
             if self.current_tok.type != Token.TTT_CLUSTER:
                 return res.failure(Error.InvalidSyntaxError(
@@ -599,7 +620,8 @@ class Parser:
 
             expr = res.register(self.expr())
 
-            if res.error: return res
+            if res.error: 
+                return res
             cases.append((condition, expr))
 
         if self.current_tok.matches(Token.TTT_KEYWORD, "else"):
@@ -612,7 +634,8 @@ class Parser:
                     "expected '{' (after expression)"
                 ))
             expr = res.register(self.statement())
-            if res.error: return res
+            if res.error: 
+                return res
             else_cases = expr
 
         return res.success(IfNode(cases, else_cases))
@@ -645,7 +668,8 @@ class Parser:
         res.register_advancement()
         self.advanced()
         start_value = res.register(self.expr())
-        if res.error: return res
+        if res.error: 
+            return res
 
         if not self.current_tok.matches(Token.TTT_KEYWORD, "to"):
             return res.failure(Error.InvalidSyntaxError(
@@ -656,14 +680,16 @@ class Parser:
         self.advanced()
 
         end_value = res.register(self.expr())
-        if res.error: return res
+        if res.error: 
+            return res
 
         if self.current_tok.matches(Token.TTT_KEYWORD, "step"):
             res.register_advancement()
             self.advanced()
 
             step_value = res.register(self.expr())
-            if res.error: return res
+            if res.error: 
+                return res
         else:
             step_value = None
 
@@ -674,7 +700,8 @@ class Parser:
             ))
 
         body = res.register(self.statement())
-        if res.error: return res
+        if res.error: 
+            return res
 
         return res.success(ForNode(var_name, start_value, end_value, step_value, body))
 
@@ -696,7 +723,8 @@ class Parser:
             self.advanced()
 
             condition_expr = res.register(self.expr())
-            if res.error: return res
+            if res.error: 
+                return res
 
             if self.current_tok.type != Token.TTT_CLUSTER:
                 return res.failure(
@@ -705,7 +733,8 @@ class Parser:
                         "expected '{'"))
 
             body = res.register(self.statement())
-            if res.error: return res
+            if res.error: 
+                return res
 
             return res.success(RepeatNode(condition_expr, body, str(type_)))
         else:
@@ -724,7 +753,8 @@ class Parser:
             self.advanced()
 
         statement = res.register(self.statement())
-        if res.error: return res
+        if res.error: 
+            return res
         statements.append(statement)
 
         more_statements = True
@@ -737,7 +767,8 @@ class Parser:
                 newline_count += 1
             if newline_count == 0:
                 more_statements = False
-            if not more_statements: break
+            if not more_statements: 
+                break
             statement = res.try_register(self.statement())
             if not statement:
                 self.reverse(res.to_reverse_count)
@@ -796,7 +827,8 @@ class Parser:
             res.register_advancement()
             self.advanced()
             expr = res.register(self.expr())
-            if res.error: return res
+            if res.error: 
+                return res
             return res.success(VarAssignNode(var_name, expr))
 
         node = res.register(self.bin_op(self.comp_expr, ((Token.TTT_KEYWORD, "and"), (Token.TTT_KEYWORD, "or"))))
@@ -918,7 +950,8 @@ class Parser:
             )
 
         node_to_return = res.register(self.expr())
-        if res.error: return res
+        if res.error: 
+            return res
 
         return res.success(FunctionDefinedNode(
             var_name_tok,
@@ -930,7 +963,8 @@ class Parser:
     def call(self):
         res = ParserResult()
         builder = res.register(self.builder())
-        if res.error: return res
+        if res.error: 
+            return res
 
         if self.current_tok.type == Token.TTT_STRUCTURE:
             original_tokens, original_idx = self.tokens, self.tok_idx
@@ -952,7 +986,8 @@ class Parser:
                 self.advanced()
 
                 arg_nodes.append(res.register(self.expr()))
-                if res.error: return res
+                if res.error: 
+                    return res
 
             self.tokens, self.tok_idx = original_tokens, original_idx
 
@@ -967,14 +1002,16 @@ class Parser:
 
         res = ParserResult()
         left = res.register(func_a())
-        if res.error: return res
+        if res.error: 
+            return res
 
         while self.current_tok.type in ops or ((self.current_tok.type, self.current_tok.value) in ops):
             op_tok = self.current_tok
             res.register_advancement()
             self.advanced()
             right = res.register(func_b())
-            if res.error: return res
+            if res.error: 
+                return res
             left = BindOperationNode(left, op_tok, right)
 
         return res.success(left)

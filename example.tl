@@ -11,4 +11,4 @@ function fib(n) {
     }
 }
 
-fib(int(readline('type maximum fibonachi: ')))
+fib(int(readline('type maximum fibonacci: ')))

@@ -80,7 +80,8 @@ class Value:
         return False
 
     def illegal_operation(self, other=None):
-        if not other: other = self
+        if not other: 
+            other = self
         return Error.RunningTimeError(
             self.pos_start, other.pos_end,
             f"Not supported operation for '{type(self).__name__}'",
@@ -385,23 +386,23 @@ class Structure(Value):
             return String(str(self.elements[0]) + str(other.value)), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
-            f"'+' is not supported for type 'structure'"
+            "'+' is not supported for type 'structure'"
         )
 
     def notted(self):
         return None, Error.InvalidValueError(
             self.pos_start, self.pos_end,
-            f"'not' or '!' is not supported for type 'structure'")
+            "'not' or '!' is not supported for type 'structure'")
 
     def anded_by(self, other):
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
-            f"'and' or '&' is not supported for type 'structure'")
+            "'and' or '&' is not supported for type 'structure'")
 
     def ored_by(self, other):
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
-            f"'or' or '|' is not supported for type 'structure'")
+            "'or' or '|' is not supported for type 'structure'")
 
     def is_true(self):
         return self.elements != 0
@@ -594,7 +595,8 @@ class BaseFunction(Value):
         res = Parser.RTResult()
 
         res.register(self.check_args(arg_names, args))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
         self.populate_args(arg_names, args, exec_ctf)
         return res.success(Null())
 
@@ -613,10 +615,12 @@ class Function(BaseFunction):
 
         exec_ctf = self.generate_new_context()
         res.register(self.check_and_populate_args(self.arg_names, args, exec_ctf))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
 
         value = res.register(interpreter.visit(self.body_node, exec_ctf, self.father))
-        if res.should_return() and res.function_return_value is None: return res
+        if res.should_return() and res.function_return_value is None: 
+            return res
 
         return res.success((value if self.should_auto_return else None) or res.function_return_value)
 
@@ -661,10 +665,12 @@ class BuiltinFunction(BaseFunction):
         method = getattr(self, method_name, self.no_visit_method)
 
         res.register(self.check_and_populate_args(method.arg_names, args, exec_cft))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
 
         return_value = res.register(method(exec_cft))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
 
         return res.success(return_value)
 
@@ -895,7 +901,8 @@ class Interpreter:
 
         for element_node in node.element_nodes:
             elements.append(res.register(self.visit(element_node, context, father)))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
 
         return res.success(Array(elements).set_pos(node.pos_start, node.pos_end))
 
@@ -905,7 +912,8 @@ class Interpreter:
 
         for structure_node in node.structure_nodes:
             structure.append(res.register(self.visit(structure_node, context, father)))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
 
         return res.success(Structure(structure).set_pos(node.pos_start, node.pos_end))
 
@@ -915,7 +923,9 @@ class Interpreter:
 
         for cluster_node in node.cluster_nodes:
             cluster.append(res.register(self.visit(cluster_node, context, father)))
-            if res.should_return(): return res
+            if res.should_return(): 
+                
+                return res
 
         return res.success(Null())
 
@@ -963,7 +973,8 @@ class Interpreter:
         value = res.register(self.visit(node.value_node, context, father))
         if isinstance(value, Null):
             escape.update({"Null": value.type})
-        if res.should_return(): return res
+        if res.should_return():
+            return res
 
         context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
         return res.success(
@@ -1009,16 +1020,19 @@ class Interpreter:
 
         for condition, expr in node.cases:
             condition_value = res.register(self.visit(condition, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
 
             if condition_value.is_true():
                 expr_value = res.register(self.visit(expr, context, father))
-                if res.should_return(): return res
+                if res.should_return(): 
+                    return res
                 return res.success(expr_value)
 
         if node.else_cases:
             else_value = res.register(self.visit(node.else_cases, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
             return res.success(else_value)
 
         return res.success(Null())
@@ -1027,14 +1041,17 @@ class Interpreter:
         res = Parser.RTResult()
 
         start_value = res.register(self.visit(node.start_value_node, context, father))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
 
         end_value = res.register(self.visit(node.end_value_node, context, father))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
 
         if node.step_value_node:
             step_value = res.register(self.visit(node.step_value_node, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
         else:
             step_value = Number(1)
 
@@ -1050,7 +1067,8 @@ class Interpreter:
             i += int(step_value.value)
 
             res.register(self.visit(node.body_node, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
 
         return res.success(Null())
 
@@ -1059,7 +1077,8 @@ class Interpreter:
 
         while True:
             condition = res.register(self.visit(node.condition_node, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
 
             if node.type == "until" and condition.is_true():
                 break
@@ -1067,7 +1086,8 @@ class Interpreter:
                 break
 
             res.register(self.visit(node.body_node, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
 
         return res.success(Null())
 
@@ -1076,7 +1096,8 @@ class Interpreter:
 
         if node.node_to_return:
             value = res.register(self.visit(node.node_to_return, context, father))
-            if res.should_return(): return res
+            if res.should_return(): 
+                return res
         else:
             value = Number.null
 
@@ -1103,14 +1124,17 @@ class Interpreter:
         args = []
 
         value_to_call = res.register(self.visit(node.node_to_call, context, father))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
         value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
 
         for arg_node in node.arg_nodes:
             args.append(res.register(self.visit(arg_node, context, father)))
-            if res.should_return(): return res
+            if res.should_return():
+                return res
         return_value = res.register(value_to_call.execute(args))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
         if isinstance(return_value, Null):
             return res.success(Null())
         else:
@@ -1127,16 +1151,19 @@ class Interpreter:
         son_node = node.son_to_call
 
         value = res.register(self.visit(son_node, context, father_node.value))
-        if res.error: return res
+        if res.error:
+            return res
 
         return res.success(value)
 
     def visit_BindOperationNode(self, node, context, father):
         res = Parser.RTResult()
         left = res.register(self.visit(node.left_node, context, father))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
         right = res.register(self.visit(node.right_node, context, father))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
         if node.op_tok.type == Token.TCP_PLUS:
             result, error = left.added_to(right)
         elif node.op_tok.type == Token.TCP_MINUS:
@@ -1183,7 +1210,8 @@ class Interpreter:
     def visit_UnaryOperationNode(self, node, context, father):
         res = Parser.RTResult()
         number = res.register(self.visit(node.node, context, father))
-        if res.should_return(): return res
+        if res.should_return(): 
+            return res
 
         error = None
         if node.op_tok.type == Token.TCP_MINUS:
@@ -1218,8 +1246,10 @@ global_symbol_table.set("run", run)
 def execute(fn, syntax, father=None):
     # 获取Token
     error, tokens = Token.Lexer(fn, syntax).make_tokens()
-    if error is not None: return error.as_string()
-    if tokens[0].type == Token.TTT_EOF: return None
+    if error is not None: 
+        return error.as_string()
+    if tokens[0].type == Token.TTT_EOF: 
+        return None
 
     interpreter = Interpreter()
     context = Context("<program>")
@@ -1228,7 +1258,8 @@ def execute(fn, syntax, father=None):
     # 生成AST
     parser = Parser.Parser(tokens, "<shell>", context)
     ast = parser.parse()
-    if ast.error: return ast.error.as_string()
+    if ast.error: 
+        return ast.error.as_string()
 
     # 解释器
     result = interpreter.visit(ast.node, context, father)

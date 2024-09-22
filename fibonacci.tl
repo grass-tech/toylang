@@ -1,4 +1,4 @@
-/* Fibonacci numbers */
+/* Fibonacci sequence */
 /* 斐波那契数列 */
 
 function fib(n) {

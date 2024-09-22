@@ -2,25 +2,25 @@
 
 A python simple programming language，一个简单的python编程语言
 
-# Python版本要求 Python version
+## Python版本要求 Python Version Required
 
 - 最低 `Python >= 3.10`
 - 推荐 `Python = 3.12`
 
 - Least `Python >= 3.10`
-- Use `Python = 3.12`
+- Recommended `Python = 3.12`
 
-# 相关说明 About
+## 相关说明 About
 
 - 令牌 tokens
-    - "Hello World" -> 字符串 (string)
-    - 114514 | 114514.191810 -> 数字 (number)
-    - () -> 结构体 (structure)
-    - [] -> 数组 (array)
-    - {} -> 代码簇 (cluster)
-    - () | [] | {} -> 包罗符 (including)
+  - "Hello World" -> 字符串 (string)
+  - 114514 | 114514.191810 -> 数字 (number)
+  - () -> 结构体 (structure)
+  - [] -> 数组 (array)
+  - {} -> 代码簇 (cluster)
+  - () | [] | {} -> 包罗符 (including)
 
-# 语法？Grammar?
+## 语法 Grammar
 
 |   关键字    | 用法                                                                                             |   用途   |
 |:--------:|:-----------------------------------------------------------------------------------------------|:------:|
@@ -33,7 +33,7 @@ A python simple programming language，一个简单的python编程语言
 | function | \<FunctionName> {\<CodesCluster>}                                                              |  构建函数  |
 |  delete  | \<Variable>                                                                                    |  删除变量  |
 |  return  | \<Expression*>                                                                                 |  函数返回  |
-| include  | \<Libray> \| <Module>                                                                          | 导入库或模块 |
+| include  | \<Library> \| \<Module>                                                                          | 导入库或模块 |
 
 |   内置函数   |           用法            |    用途    |
 |:--------:|:-----------------------:|:--------:|
@@ -44,7 +44,7 @@ A python simple programming language，一个简单的python编程语言
 | boolean  |      <Condition*>       | 将值转换为布尔值 |
 |  array   | <Expression*> -> String | 将值转换为数组  |
 |  length  | <Expression*> -> String |   获取长度   |
-|   run    |    <File> -> String     |   运行tl   |
+|   run    |    \<File> -> String     |   运行tl源文件  |
 
 - Variable : 变量名 variable name
 - Condition : 条件表达式 condition expr
@@ -57,174 +57,185 @@ A python simple programming language，一个简单的python编程语言
 - (.*?) -> (.*?) : 表示默认值 default value
 - | ： 表示"或"  'or'
 
-## 如何隔开代码簇 How to split cluster
+### 如何隔开代码簇 How to split cluster
 
 **使用 *分号* 隔开代码簇的各个代码**
 
 **Use *Semi* to separate codes in cluster**
 
-## 三元表达式 Ternary Expression
+### 三元表达式 Ternary Expression
 
 用法
 
-```
+```js
 <Variable> ? <Expression> : <Expression>
-     ^         ^      ^       ^      ^
-     |         |      |       |      |
-   变量名    触发符  真表达式 真|假  假表达式
+    ^      ^      ^       ^      ^
+    |      |      |       |      |
+   变量名 触发符 真表达式   真|假  假表达式
 ```
 
 示例
 
-```
+```js
 true ? "值为真" : "值为假"
 ```
 
-## 变量别名 Use Variable as another name
+### 变量别名 Variable Alias
 
 用法
 
-```
+```txt
 <Variable> -> <AnotherVaraibleName>
-      ^         ^         ^
-      |         |         |
-被别名的变量    符号     别名变量
+    ^       ^         ^
+    |       |         |
+被别名的变量  符号     别名变量
 ```
 
 示例
 
-```
+```txt
 true -> True
 ```
 
-# 代码示例 Code Example
+## 代码示例 Code Example
 
-- 奇偶数判断
+- **奇偶数判断**
 
-Shell
+  Shell
 
-```
-function isEven(number) {if number % 2 == 0 {println('是偶数')} else {println('非偶数')}}
-isEven(20)
-isEven(19)
-```
+  ```shell
+  > function isEven(number) {if number % 2 == 0 {println('是偶数')} else {println('非偶数')}}
+  > isEven(20)
+  是偶数
+  > isEven(19)
+  非偶数
+  ```
 
-File
+  File
 
-```
-funtion isEven(number) {
-  if number % 2 == 0 {
-    println('是偶数')
-  } else {
-    println('是奇数')
-  }
-}
-
-println(isEven(19))
-println(isEven(20))
-```
-
-- 迭代奇偶数判断
-
-Shell
-
-```
-var maximum = int(readline('Type maximum number: '))
-for i from 1 to maximum {if i % 2 == 0 {println(string(i) + " 是偶数")} else {println(string(i) + " 是奇数")}}
-```
-
-File
-
-```
-var maximum = int(readline('Type maximum number: '))
-for i from 1 to maximum {
-  if i % 2 == 0 {
-    println(string(i) + " 是偶数")
-  } else {
-    println(string(i) + " 是奇数")
-  }
-}
-```
-
-- 输出偶数
-
-Shell
-
-```
-var minimum = int(readline('Type minimum number: '))
-var maximum = int(readline('Type maximum number: '))
-if minimum % 2 == 0 {for i from minimum to maximum step 2 {println(i)}} else {println(string(minimum) + " 非偶数，请输入一个偶数")}
-```
-
-File
-
-```
-var minimum = int(readline('Type minimum number: '))
-var maximum = int(readline('Type maximum number: '))
-if minimum % 2 == 0 {
-  for i from minimum to maximum step 2 {
-    println(i)
-  } 
-} else {
-  println(string(minimum) + " 非偶数，请输入一个偶数")
-}
-```
-
-- 斐波那契数列
-
-Shell
-
-```
-function fib(n) {function fn(i) {if i < 2 {return 1} else {return fn(i - 2) + fn(i - 1)}};for x from 0 to n {println(fn(x))}}
-fib(int(readline('type maximum fibonachi: ')))
-```
-
-File
-
-```
-function fib(n) {
-  function fn(i) {
-    if i < 2 {
-      return 1
+  ```js
+  function isEven(number) {
+    if number % 2 == 0 {
+      println('是偶数')
     } else {
-      return fn(i - 2) + fn(i - 1)
+      println('是奇数')
     }
-  };
-  for x from 0 to n {
-    println(fn(x))
   }
-}
 
-fib(int(readline('type maximum fibonachi: ')))
-```
+  println(isEven(19))
+  println(isEven(20))
+  ```
 
-- 累加器
+- **迭代奇偶数判断**
 
-Shell
+  Shell
 
-```
-var start = int(readline('Type start number: '))
-var end = int(readline('Type end number: '))
-var counter = 0
-repeat until start == end {var counter = counter + 1;var start = start + 1}
-println('从' + string(end - counter) + '加到' + string(end) + '需要加' + string(counter) + '次')
-```
+  ```js
+  > var maximum = int(readline('Type maximum number: '))
+  > for i from 1 to maximum {if i % 2 == 0 {println(string(i) + " 是偶数")} else {println(string(i) + " 是奇数")}}
+  ```
 
-File
+  File
 
-```
-var start = int(readline('Type start number: '))
-var end = int(readline('Type end number: '))
-var counter = 0
-repeat until start == end {
-  var counter = counter + 1;
-  var start = start + 1
-}
-println('从' + string(end - counter) + '加到' + string(end) + '需要加' + string(counter) + '次')
-```
+  ```js
+  var maximum = int(readline('Type maximum number: '))
+  for i from 1 to maximum {
+    if i % 2 == 0 {
+      println(string(i) + " 是偶数")
+    } else {
+      println(string(i) + " 是奇数")
+    }
+  }
+  ```
 
-- 正确数据校验
+- **输出偶数**
 
-```
-repeat meet true {var data = readline('Type a data: ');repeat meet data == 'exit' {println('正确数据');var data = ''}}
-```
+  Shell
+  
+  ```js
+  > var minimum = int(readline('Type minimum number: '))
+  > var maximum = int(readline('Type maximum number: '))
+  > if minimum % 2 == 0 {for i from minimum to maximum step 2 {println(i)}} else {println(string(minimum) + " 非偶数，请输入一个偶数")}
+  ```
+  
+  File
+  
+  ```js
+  var minimum = int(readline('Type minimum number: '))
+  var maximum = int(readline('Type maximum number: '))
+  if minimum % 2 == 0 {
+    for i from minimum to maximum step 2 {
+      println(i)
+    } 
+  } else {
+    println(string(minimum) + " 非偶数，请输入一个偶数")
+  }
+  ```
+
+- **斐波那契数列**
+
+  Shell
+  
+  ```js
+  > function fib(n) {function fn(i) {if i < 2 {return 1} else {return fn(i - 2) + fn(i - 1)}};for x from 0 to n {println(fn(x))}}
+  > fib(int(readline('type maximum fibonachi: ')))
+  ```
+  
+  File
+  
+  ```js
+  function fib(n) {
+    function fn(i) {
+      if i < 2 {
+        return 1
+      } else {
+        return fn(i - 2) + fn(i - 1)
+      }
+    };
+    for x from 0 to n {
+      println(fn(x))
+    }
+  }
+  
+  fib(int(readline('type maximum fibonachi: ')))
+  ```
+
+- **累加器**
+
+  Shell
+
+  ```js
+  var start = int(readline('Type start number: '))
+  var end = int(readline('Type end number: '))
+  var counter = 0
+  repeat until start == end {
+    var counter = counter + 1;
+    var start = start   + 1
+  }
+  println('从' + string(end - counter) + '加到' + string(end) + '需要加' +   string(counter) + '次')
+  ```
+  
+  File
+  
+  ```js
+  var start = int(readline('Type start number: '))
+  var end = int(readline('Type end number: '))
+  var counter = 0
+  repeat until start == end {
+    var counter = counter + 1;
+    var start = start + 1
+  }
+  println('从' + string(end - counter) + '加到' + string(end) + '需要加' +   string(counter) + '次')
+  ```
+
+- **正确数据校验**
+
+  ```js
+  repeat meet true {
+    var data = readline('Type a data: ');
+      meet data == 'exit' {
+      println('正确数据');
+      var data = ''
+    }
+  }
+  ```
