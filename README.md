@@ -44,7 +44,7 @@ A python simple programming language，一个简单的python编程语言
 | boolean  |      <Condition*>       | 将值转换为布尔值 |
 |  array   | <Expression*> -> String | 将值转换为数组  |
 |  length  | <Expression*> -> String |   获取长度   |
-|   run    |    <File> -> String     |   运行tl   |
+|   run    |    <File> -> String     |   运行tl源文件   |
 
 - Variable : 变量名 variable name
 - Condition : 条件表达式 condition expr
