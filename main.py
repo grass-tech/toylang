@@ -1,5 +1,3 @@
-import Token
-import Parser
 import Interpreter
 
 global_symbol_table = Interpreter.SymbolTable()
@@ -17,36 +15,14 @@ global_symbol_table.set("boolean", Interpreter.bool_)
 global_symbol_table.set("array", Interpreter.array)
 
 global_symbol_table.set("length", Interpreter.len_)
-
-
-def run(syntax):
-    # 获取Token
-    error, tokens = Token.Lexer("<shell>", syntax).make_tokens()
-    if error is not None: return error.as_string()
-    if tokens[0].type == Token.TTT_EOF: return None
-
-    interpreter = Interpreter.Interpreter()
-    context = Interpreter.Context("<program>")
-    context.symbol_table = global_symbol_table
-
-    # 生成AST
-    parser = Parser.Parser(tokens, "<shell>", context)
-    ast = parser.parse()
-    if ast.error: return ast.error.as_string()
-
-    # 解释器
-    result = interpreter.visit(ast.node, context)
-    if not result.error:
-        return result.value
-    else:
-        return result.error.as_string()
+global_symbol_table.set("run", Interpreter.run)
 
 
 if __name__ == "__main__":
     while True:
         syntax = str(input("Toy > "))
         if syntax.strip():
-            res = run(syntax)
+            res = Interpreter.execute("<shell>", str(syntax))
             if res is not None:
                 try:
                     if isinstance(res.elements[0], Interpreter.Null):

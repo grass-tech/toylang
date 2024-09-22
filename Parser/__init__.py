@@ -85,8 +85,9 @@ class StructureNode:
 
 # 变量节点
 class VarAccessNode:
-    def __init__(self, var_name_tok):
+    def __init__(self, var_name_tok, father_name_tok=None):
         self.var_name_tok = var_name_tok
+        self.father_name_tok = father_name_tok
 
         self.pos_start = self.var_name_tok.pos_start
         self.pos_end = self.var_name_tok.pos_end
@@ -162,9 +163,10 @@ class FunctionDefinedNode:
 
 
 class CallFunctionNode:
-    def __init__(self, node_to_call, arg_nodes):
+    def __init__(self, node_to_call, arg_nodes, father_to_call=None):
         self.node_to_call = node_to_call
         self.arg_nodes = arg_nodes
+        self.father_to_call = father_to_call
 
         self.pos_start = self.node_to_call.pos_start
 
@@ -172,6 +174,16 @@ class CallFunctionNode:
             self.pos_end = self.arg_nodes[len(self.arg_nodes) - 1].pos_end
         else:
             self.pos_end = self.node_to_call.pos_end
+
+
+# 父继承调用节点
+class FatherCallSonNode:
+    def __init__(self, father_to_call, son_to_call):
+        self.father_to_call = father_to_call
+        self.son_to_call = son_to_call
+
+        self.pos_start = self.father_to_call.pos_start
+        self.pos_end = self.son_to_call.pos_start
             
 
 # 关键字节点
@@ -180,6 +192,15 @@ class ReturnNode:
     def __init__(self, node_to_return, pos_start, pos_end):
         self.node_to_return = node_to_return
         
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+
+# 导入节点
+class IncludeNode:
+    def __init__(self, node_to_include, pos_start, pos_end):
+        self.node_to_include = node_to_include
+
         self.pos_start = pos_start
         self.pos_end = pos_end
 
@@ -379,12 +400,21 @@ class Parser:
                 self.advanced()
 
                 identifier = self.current_tok
-                if res.error: return res
 
                 res.register_advancement()
                 self.advanced()
                 return res.success(VarAssignNode(identifier, VarAccessNode(tok)))
 
+            elif self.current_tok.type == Token.TTP_DOT:
+                res.register_advancement()
+                self.advanced()
+
+                son_class = self.current_tok
+
+                res.register_advancement()
+                self.advanced()
+
+                return res.success(FatherCallSonNode(son_class, VarAccessNode(tok, son_class)))
             return res.success(VarAccessNode(tok))
 
         # 对结构的判断
@@ -433,6 +463,12 @@ class Parser:
             delete_expr = res.register(self.delete_expr())
             if res.error: return res
             return res.success(DeleteNode(delete_expr))
+
+        # 库
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "include"):
+            include_expr = res.register(self.include_expr())
+            if res.error: return res
+            return res.success(include_expr)
 
         return res.failure(
             Error.InvalidSyntaxError(
@@ -780,7 +816,7 @@ class Parser:
         if self.current_tok.type != Token.TTT_IDENTIFIER:
             return res.failure(Error.InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end.copy(),
-                "lose variable name"
+                "lost variable name"
             ))
 
         var_name = self.current_tok
@@ -789,6 +825,26 @@ class Parser:
         self.advanced()
 
         return res.success(var_name)
+
+    def include_expr(self):
+        res = ParserResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        res.register_advancement()
+        self.advanced()
+
+        if self.current_tok.type != Token.TTT_IDENTIFIER:
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "lost libray name"
+            ))
+
+        lib_name = self.current_tok
+
+        res.register_advancement()
+        self.advanced()
+
+        return res.success(IncludeNode(lib_name, pos_start, self.current_tok.pos_end.copy()))
 
     # 函数
     def func_def(self):
