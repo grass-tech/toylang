@@ -1,16 +1,17 @@
-/* Fibonacci numbers */
-/* 斐波那契数列 */
+/* 多个函数包文件 */
 
 function fib(n) {
-    function fn(i) {
+    var result = [];
+    function factor(i) {
         if i < 2 {
             return 1;
         } else {
-            return fn(i - 2) + fn(i - 1);
+            return factor(i - 2) + factor(i - 1)
         }
-    };
-    for x from 0 to n {
-        println(fn(x));
-    };
-}
+    }
 
+    for x from 0 to n {
+        var result = result + factor(x);
+    }
+    return result
+}
