@@ -3,8 +3,7 @@ def string_with_arrows(text, pos_start, pos_end):
 
     idx_start = max(text.rfind('\n', 0, pos_start.idx), 0)
     idx_end = text.find('\n', idx_start + 1)
-    if idx_end < 0: 
-        idx_end = len(text)
+    if idx_end < 0: idx_end = len(text)
 
     line_count = pos_end.ln - pos_start.ln + 1
     for i in range(line_count):
@@ -17,8 +16,7 @@ def string_with_arrows(text, pos_start, pos_end):
 
         idx_start = idx_end
         idx_end = text.find('\n', idx_start + 1)
-        if idx_end < 0: 
-            idx_end = len(text)
+        if idx_end < 0: idx_end = len(text)
 
     return result
 
@@ -31,7 +29,7 @@ class Error:
         self.details = details
 
     def as_string(self):
-        result = 'ErrorBack(Parsing an expression)\n'
+        result = f'ErrorBack(Parsing an expression)\n'
         result += f"\tIn the line {self.pos_start.ln} of the file {self.pos_start.fn}\n"
         result += '\n\t\t' + string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end) + "\n"
         result += f'{self.error_name}: {self.details}'

@@ -44,7 +44,7 @@ TCP_MINUS = "MINUS"  # -
 TCP_DOUBLE_MINUS = "DECREASE"  # --
 TCP_MUL = "MUL"  # *
 TCP_POW = "POW"  # **
-TCP_DIV = "DIV"   # /
+TCP_DIV = "DIV"  # /
 TCP_INTEGER_DIV = "TRUNCATION"  # //
 TCP_MOD = "MOD"  # %
 ## 逻辑(Logic Pos)
@@ -387,8 +387,7 @@ class Lexer:
                             pos_start, self._pos.copy(), f"The '{mp}' was never closed"), None]
                     self._advanced()
                 err, t = Lexer(self._run_mode, str(self._syntax[start_idx:i + 1])).make_tokens()
-                if err: 
-                    return [err, None]
+                if err: return [err, None]
                 tokens.append(t[:-1][0])
                 self._advanced()
 
@@ -396,8 +395,7 @@ class Lexer:
                 self._advanced()
                 if relay_char:
                     err, t = Lexer(self._run_mode, relay_char).make_tokens()
-                    if err: 
-                        return [err, None]
+                    if err: return [err, None]
                     tokens += t[:-1]
                 break
             elif self._current_char is None:
@@ -415,8 +413,7 @@ class Lexer:
                         pos_start, self._pos.copy(), f"The '{match_pos}' was never closed"), None]
                 if not disappearString and self._current_char in punctuation:
                     err, t = Lexer(self._run_mode, relay_char).make_tokens()
-                    if err: 
-                        return [err, None]
+                    if err: return [err, None]
                     tokens += t[:-1]
                     relay_char = ""
 
