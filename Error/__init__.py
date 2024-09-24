@@ -64,3 +64,8 @@ class DefinedError(Error):
 class InvalidTypeError(Error):
     def __init__(self, pos_start, pos_end, details=''):
         super().__init__(pos_start, pos_end, 'TypeError', details)
+
+
+class ParseEOFError(Error):
+    def __init__(self, pos_start, pos_end, details=''):
+        super().__init__(pos_start, pos_end, 'ParseEOFError', details)

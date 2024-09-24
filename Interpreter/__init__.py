@@ -3,6 +3,7 @@ import ast
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Token
 import Parser
@@ -166,8 +167,8 @@ class Number(Value):
             left, right = self.get_num(self.value, other.value)
             if right == 0:
                 return (None, Error.InvalidValueError(
-                            self.pos_start, self.pos_end,
-                            "division by zero, division not supported by zero"))
+                    self.pos_start, self.pos_end,
+                    "division by zero, division not supported by zero"))
             return Number(left / right), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
@@ -198,8 +199,8 @@ class Number(Value):
             left, right = self.get_num(self.value, other.value)
             if right == 0:
                 return (None, Error.InvalidValueError(
-                            self.pos_start, self.pos_end,
-                            "Modulo by zero, modulo not supported by zero"))
+                    self.pos_start, self.pos_end,
+                    "Modulo by zero, modulo not supported by zero"))
             return Number(left % right), None
 
     def is_equals(self, other):
@@ -542,10 +543,9 @@ class Cluster(Value):
 
 
 class BaseFunction(Value):
-    def __init__(self, name, father=None):
+    def __init__(self, name):
         super().__init__()
         self.name = name or '<anonymous'
-        self.father = father
 
     def generate_new_context(self):
         new_context = Context(self.name, self.context, self.pos_start)
@@ -556,9 +556,8 @@ class BaseFunction(Value):
         new_context.symbol_table.set("true", true)
         new_context.symbol_table.set("false", false)
         for var_name, value in self.context.symbol_table.symbols.items():
-            if isinstance(value, Function) or isinstance(value, BuiltinFunction) or \
-                    isinstance(value, dict):
-                new_context.symbol_table.set(var_name, value, self.father)
+            if isinstance(value, Function) or isinstance(value, BuiltinFunction):
+                new_context.symbol_table.set(var_name, value)
 
         return new_context
 
@@ -601,11 +600,11 @@ class BaseFunction(Value):
 
 # 函数
 class Function(BaseFunction):
-    def __init__(self, name, body_node, arg_names, should_auto_return, father=None):
-        super().__init__(name, father)
+    def __init__(self, name, body_node, arg_names, should_return_null):
+        super().__init__(name)
         self.body_node = body_node
         self.arg_names = arg_names
-        self.should_auto_return = should_auto_return
+        self.should_return_null = should_return_null
 
     def execute(self, args):
         res = Parser.RTResult()
@@ -615,13 +614,14 @@ class Function(BaseFunction):
         res.register(self.check_and_populate_args(self.arg_names, args, exec_ctf))
         if res.should_return(): return res
 
-        value = res.register(interpreter.visit(self.body_node, exec_ctf, self.father))
+        value = res.register(interpreter.visit(self.body_node, exec_ctf, None))
         if res.should_return() and res.function_return_value is None: return res
 
-        return res.success((value if self.should_auto_return else None) or res.function_return_value)
+        return_value = (value if self.should_return_null else None) or res.function_return_value or Number.null
+        return res.success(return_value)
 
     def copy(self):
-        copy = Function(self.name, self.body_node, self.arg_names, self.should_auto_return)
+        copy = Function(self.name, self.body_node, self.arg_names, self.should_return_null)
         copy.set_context(self.context)
         copy.set_pos(self.pos_start, self.pos_end)
         return copy
@@ -644,7 +644,7 @@ class Function(BaseFunction):
         return -1
 
     def __repr__(self):
-        return (f"<external.function {"" if self.father is None else f'{self.father}.'}{self.name} @ "
+        return (f"<external.function {self.name} @ "
                 f"{id(f'{self.name}')}>")
 
 
@@ -668,16 +668,18 @@ class BuiltinFunction(BaseFunction):
 
         return res.success(return_value)
 
-    def no_visit_method(self, node, context):
+    def no_visit_method(self, node, context, father):
         raise Exception(f"No execute_{self.name} method defined")
 
     def execute_println(self, exec_cft):
         print(str(exec_cft.symbol_table.get('value')))
         return Parser.RTResult().success(Null())
+
     execute_println.arg_names = ["value"]
 
     def execute_readline(self, exec_cft):
         return Parser.RTResult().success(String(str(input(str(exec_cft.symbol_table.get('value'))))))
+
     execute_readline.arg_names = ["value"]
 
     def execute_len(self, exec_cft):
@@ -688,48 +690,6 @@ class BuiltinFunction(BaseFunction):
             ))
         return Parser.RTResult().success(Number(int(exec_cft.symbol_table.get('value').length())))
     execute_len.arg_names = ["value"]
-
-    def execute_int(self, exec_cft):
-        try:
-            return Parser.RTResult().success(Number(int(str(exec_cft.symbol_table.get('value')))))
-        except (ValueError, SyntaxError):
-            return Parser.RTResult().failure(
-                Error.InvalidValueError(
-                    self.pos_start, self.pos_end,
-                    f"Can't literal for int() with: '{str(exec_cft.symbol_table.get('value'))}'")
-            )
-    execute_int.arg_names = ["value"]
-
-    def execute_str(self, exec_cft):
-        return Parser.RTResult().success(String(str(exec_cft.symbol_table.get('value'))))
-    execute_str.arg_names = ["value"]
-
-    def execute_float(self, exec_cft):
-        try:
-            return Parser.RTResult().success(Number(float(str(exec_cft.symbol_table.get('value')))))
-        except (ValueError, SyntaxError):
-            return Parser.RTResult().failure(
-                Error.InvalidValueError(
-                    self.pos_start, self.pos_end,
-                    f"Can't literal for float() with: '{str(exec_cft.symbol_table.get('value'))}'")
-            )
-    execute_float.arg_names = ["value"]
-
-    def execute_bool(self, exec_cft):
-        return Parser.RTResult().success(exec_cft.symbol_table.get("value").boolean())
-    execute_bool.arg_names = ["value"]
-
-    def execute_array(self, exec_cft):
-        try:
-            return Parser.RTResult().success(
-                Array(ast.literal_eval(str(exec_cft.symbol_table.get('value')))))
-        except (ValueError, SyntaxError):
-            return Parser.RTResult().failure(
-                Error.InvalidValueError(
-                    self.pos_start, self.pos_end,
-                    f"Can't literal for array() with: '{str(exec_cft.symbol_table.get('value'))}'")
-            )
-    execute_array.arg_names = ["value"]
 
     def execute_run(self, exec_cft):
         fn = exec_cft.symbol_table.get("filename")
@@ -747,14 +707,13 @@ class BuiltinFunction(BaseFunction):
         try:
             with open(fn, "r", encoding="utf-8") as f:
                 scripts = f.read()
-        except Exception as e:
+        except FileNotFoundError:
             return Parser.RTResult().failure(
                 Error.InvalidValueError(
                     self.pos_start, self.pos_end,
-                    f"Failed to load file: '{fn}', 'cause {e}"
+                    f"'{fn}' is not exists"
                 )
             )
-
         error = execute(fn, scripts)
 
         if error and not isinstance(error, Array):
@@ -768,8 +727,54 @@ class BuiltinFunction(BaseFunction):
             )
 
         return Parser.RTResult().success(Null())
+    execute_run.arg_names = ["filename"]
 
-    execute_run.arg_names = ['filename']
+    def execute_int(self, exec_cft):
+        try:
+            return Parser.RTResult().success(Number(int(str(exec_cft.symbol_table.get('value')))))
+        except (ValueError, SyntaxError):
+            return Parser.RTResult().failure(
+                Error.InvalidValueError(
+                    self.pos_start, self.pos_end,
+                    f"Can't literal for int() with: '{str(exec_cft.symbol_table.get('value'))}'")
+            )
+
+    execute_int.arg_names = ["value"]
+
+    def execute_str(self, exec_cft):
+        return Parser.RTResult().success(String(str(exec_cft.symbol_table.get('value'))))
+
+    execute_str.arg_names = ["value"]
+
+    def execute_float(self, exec_cft):
+        try:
+            return Parser.RTResult().success(Number(float(str(exec_cft.symbol_table.get('value')))))
+        except (ValueError, SyntaxError):
+            return Parser.RTResult().failure(
+                Error.InvalidValueError(
+                    self.pos_start, self.pos_end,
+                    f"Can't literal for float() with: '{str(exec_cft.symbol_table.get('value'))}'")
+            )
+
+    execute_float.arg_names = ["value"]
+
+    def execute_bool(self, exec_cft):
+        return Parser.RTResult().success(exec_cft.symbol_table.get("value").boolean())
+
+    execute_bool.arg_names = ["value"]
+
+    def execute_array(self, exec_cft):
+        try:
+            return Parser.RTResult().success(
+                Array(ast.literal_eval(str(exec_cft.symbol_table.get('value')))))
+        except (ValueError, SyntaxError):
+            return Parser.RTResult().failure(
+                Error.InvalidValueError(
+                    self.pos_start, self.pos_end,
+                    f"Can't literal for array() with: '{str(exec_cft.symbol_table.get('value'))}'")
+            )
+
+    execute_array.arg_names = ["value"]
 
     def copy(self):
         copy = BuiltinFunction(self.name)
@@ -804,38 +809,7 @@ str_ = BuiltinFunction.str = BuiltinFunction("str")
 float_ = BuiltinFunction.float = BuiltinFunction("float")
 bool_ = BuiltinFunction.bool = BuiltinFunction("bool")
 array = BuiltinFunction.array = BuiltinFunction("array")
-
-run = BuiltinFunction.run = BuiltinFunction("run")
-
-
-# 库和模块
-class Libray(Value):
-    def __init__(self, name):
-        super().__init__()
-        self.name = name
-
-    def copy(self):
-        copy = Libray(self.name)
-        copy.set_context(self.context)
-        copy.set_pos(self.pos_start, self.pos_end)
-        return copy
-
-    def is_equals(self, other):
-        if isinstance(other, Libray):
-            return Number(int(bool(self.name == other.name)))
-        else:
-            return Number(0), None
-
-    @staticmethod
-    def boolean():
-        return Number(1)
-
-    @staticmethod
-    def length():
-        return -1
-
-    def __repr__(self):
-        return f"<libray | module @ {self.name}>"
+run_ = BuiltinFunction.run_ = BuiltinFunction("run")
 
 
 class Context:
@@ -857,19 +831,22 @@ class SymbolTable:
             return self.parent.get(name)
         return value
 
-    def set(self, name, value, father=None):
-        if father is None:
-            self.symbols[name] = value
-        else:
-            if father not in self.symbols.keys():
-                self.symbols.update({father: {}})
-            self.symbols[father][name] = value
-
-    def reset(self):
-        self.symbols = {}
+    def set(self, name, value):
+        self.symbols[name] = value
 
     def remove(self, name):
         del self.symbols[name]
+
+
+ESCAPE = {
+    "Number": Number,
+    "String": String,
+    "Structure": Structure,
+    "Cluster": Cluster,
+    "Array": Array,
+    "Function": Function,
+    "BuiltinFunction": BuiltinFunction,
+}
 
 
 class Interpreter:
@@ -907,6 +884,10 @@ class Interpreter:
             structure.append(res.register(self.visit(structure_node, context, father)))
             if res.should_return(): return res
 
+        if len(structure) == 1 and isinstance(structure[0], Number):
+            return res.success(Number(Number(0).get_num(str(structure[0]))).set_pos(node.pos_start, node.pos_end))
+        elif len(structure) == 1 and isinstance(structure[0], String):
+            return res.success(String(str(structure[0])).set_pos(node.pos_start, node.pos_end))
         return res.success(Structure(structure).set_pos(node.pos_start, node.pos_end))
 
     def visit_ClusterNode(self, node, context, father):
@@ -919,6 +900,21 @@ class Interpreter:
 
         return res.success(Null())
 
+    def visit_FatherCallChildNode(self, node, context, father):
+        res = Parser.RTResult()
+
+        father_node = node.father_node
+        child_node = node.child_node
+
+        father_list = []
+        for fnd in father_node:
+            father_list.append(fnd.value)
+
+        value = res.register(self.visit(Parser.VarAccessNode(child_node), context, father_list))
+        if res.should_return(): return res
+
+        return res.success(String(value).set_pos(node.pos_start, node.pos_end))
+
     @staticmethod
     def visit_VarAccessNode(node, context, father):
         res = Parser.RTResult()
@@ -930,45 +926,39 @@ class Interpreter:
                     node.pos_start, node.pos_end,
                     f"'{var_name}' is not defined")
             )
-        if isinstance(value, dict):
-            if node.father_name_tok is None:
-                value = value[var_name].copy().set_pos(node.pos_start, node.pos_end).set_context(context)
-            elif str(node.father_name_tok.value) in value.keys():
-                value = value[
-                    node.father_name_tok.value
-                ].copy().set_pos(node.pos_start, node.pos_end).set_context(context)
-            else:
-                return res.failure(
-                    Error.DefinedError(
-                        node.pos_start, node.pos_end,
-                        f"'{node.father_name_tok.value}' is not defined")
-                )
-        else:
-            value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+
+        if father is not None:
+            for f in father:
+                if isinstance(value, dict):
+                    if f in value.keys():
+                        value = value[f].symbol_table.get(f)
+                    else:
+                        return res.failure(
+                            Error.DefinedError(
+                                node.pos_start, node.pos_end,
+                                f"'{var_name}' is not defined")
+                        )
+                else:
+                    return res.failure(
+                        Error.RunningTimeError(
+                            node.pos_start, node.pos_end,
+                            f"'{var_name}' can't called child")
+                    )
+        value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
         return res.success(value)
 
     def visit_VarAssignNode(self, node, context, father):
-        escape = {
-            "Number": Number,
-            "String": String,
-            "Structure": Structure,
-            "Cluster": Cluster,
-            "Array": Array,
-            "Function": Function,
-            "BuiltinFunction": BuiltinFunction,
-            "Libray": Libray,
-        }
         res = Parser.RTResult()
         var_name = node.var_name_tok.value
         value = res.register(self.visit(node.value_node, context, father))
         if isinstance(value, Null):
-            escape.update({"Null": value.type})
+            ESCAPE.update({"Null": value.type})
         if res.should_return(): return res
 
-        context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
+        context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value)
         return res.success(
             Null(
-                escape[str(type(value).__name__)],
+                ESCAPE[str(type(value).__name__)],
                 value.get() if isinstance(value, Null) else value))
 
     @staticmethod
@@ -984,42 +974,23 @@ class Interpreter:
         context.symbol_table.remove(var_name)
         return res.success(Null())
 
-    @staticmethod
-    def visit_IncludeNode(node, context, father):
-        res = Parser.RTResult()
-
-        lib_name = node.node_to_include.value
-        try:
-            with open(f"{lib_name}.tl", "r", encoding="utf-8") as f:
-                scripts = f.read()
-        except Exception as e:
-            return Parser.RTResult().failure(
-                Error.InvalidValueError(
-                    node.node_to_include.pos_start, node.node_to_include.pos_end,
-                    f"{lib_name} is not a module or libray, \nCOMPI: {e}"
-                )
-            )
-        lib_value = Libray(lib_name).set_context(context).set_pos(node.pos_start, node.pos_end)
-        context.symbol_table.set(lib_name, lib_value, lib_name)
-        execute(lib_name, scripts, lib_name)
-        return res.success(Null())
-
     def visit_IfNode(self, node, context, father):
         res = Parser.RTResult()
 
-        for condition, expr in node.cases:
+        for condition, expr, should_return_null in node.cases:
             condition_value = res.register(self.visit(condition, context, father))
             if res.should_return(): return res
 
             if condition_value.is_true():
                 expr_value = res.register(self.visit(expr, context, father))
                 if res.should_return(): return res
-                return res.success(expr_value)
+                return res.success(Null() if should_return_null else expr_value)
 
         if node.else_cases:
-            else_value = res.register(self.visit(node.else_cases, context, father))
+            expr, should_return_null = node.else_cases
+            expr_value = res.register(self.visit(expr, context, father))
             if res.should_return(): return res
-            return res.success(else_value)
+            return res.success(Null() if should_return_null else expr_value)
 
         return res.success(Null())
 
@@ -1050,7 +1021,13 @@ class Interpreter:
             i += int(step_value.value)
 
             res.register(self.visit(node.body_node, context, father))
-            if res.should_return(): return res
+            if res.should_return() and \
+                res.loop_should_break is False and res.loop_should_continue is False: return res
+
+            if res.loop_should_break:
+                break
+            if res.loop_should_continue:
+                continue
 
         return res.success(Null())
 
@@ -1067,20 +1044,22 @@ class Interpreter:
                 break
 
             res.register(self.visit(node.body_node, context, father))
-            if res.should_return(): return res
+            if res.should_return() and \
+                res.loop_should_break is False and res.loop_should_continue is False: return res
+            if res.loop_should_break:
+                break
+            if res.loop_should_continue:
+                continue
 
         return res.success(Null())
 
-    def visit_ReturnNode(self, node, context, father):
-        res = Parser.RTResult()
+    @staticmethod
+    def visit_BreakNode(node, context, father):
+        return Parser.RTResult().success_break()
 
-        if node.node_to_return:
-            value = res.register(self.visit(node.node_to_return, context, father))
-            if res.should_return(): return res
-        else:
-            value = Number.null
-
-        return res.success_return(value)
+    @staticmethod
+    def visit_ContinueNode(node, context, father):
+        return Parser.RTResult().success_continue()
 
     @staticmethod
     def visit_FunctionDefinedNode(node, context, father):
@@ -1090,11 +1069,11 @@ class Interpreter:
         body_node = node.body_node
         arg_names = [arg_name.value for arg_name in node.arg_name_toks]
         func_value = Function(
-            func_name, body_node, arg_names, node.should_auto_return, father
+            func_name, body_node, arg_names, node.should_auto_return
         ).set_context(context).set_pos(node.pos_start, node.pos_end)
 
         if node.var_name_tok:
-            context.symbol_table.set(func_name, func_value, father)
+            context.symbol_table.set(func_name, func_value)
 
         return res.success(Null())
 
@@ -1112,7 +1091,7 @@ class Interpreter:
         return_value = res.register(value_to_call.execute(args))
         if res.should_return(): return res
         if isinstance(return_value, Null):
-            return res.success(Null())
+            return res.success(Number.null)
         else:
             try:
                 return_value = return_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
@@ -1120,16 +1099,14 @@ class Interpreter:
                 return res.success(Null())
         return res.success(return_value)
 
-    def visit_FatherCallSonNode(self, node, context, father):
+    def visit_ReturnNode(self, node, context, father):
         res = Parser.RTResult()
-
-        father_node = node.father_to_call
-        son_node = node.son_to_call
-
-        value = res.register(self.visit(son_node, context, father_node.value))
-        if res.error: return res
-
-        return res.success(value)
+        if node.node_to_return:
+            value = res.register(self.visit(node.node_to_return, context, father))
+            if res.should_return(): return res
+        else:
+            value = Number.null
+        return res.success_return(value)
 
     def visit_BindOperationNode(self, node, context, father):
         res = Parser.RTResult()
@@ -1212,7 +1189,7 @@ global_symbol_table.set("boolean", bool_)
 global_symbol_table.set("array", array)
 
 global_symbol_table.set("length", len_)
-global_symbol_table.set("run", run)
+global_symbol_table.set("run", run_)
 
 
 def execute(fn, syntax, father=None):
@@ -1226,13 +1203,16 @@ def execute(fn, syntax, father=None):
     context.symbol_table = global_symbol_table
 
     # 生成AST
-    parser = Parser.Parser(tokens, "<shell>", context)
+    parser = Parser.Parser(tokens, fn, context)
     ast = parser.parse()
     if ast.error: return ast.error.as_string()
 
     # 解释器
     result = interpreter.visit(ast.node, context, father)
     if not result.error:
-        return result.value
+        if isinstance(result.value.elements[0], Null):
+            return None
+        else:
+            return result.value
     else:
         return result.error.as_string()
