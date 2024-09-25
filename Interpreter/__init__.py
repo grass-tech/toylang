@@ -542,10 +542,43 @@ class Cluster(Value):
         return f"{''.join([str(x) for x in self.elements])}"
 
 
+class Library(Value):
+    def __init__(self, lib_name):
+        super().__init__()
+        self.lib_name = lib_name
+
+    def copy(self):
+        copy = Library(self.lib_name)
+        copy.set_pos(self.pos_start, self.pos_end)
+        copy.set_context(self.context)
+        return copy
+
+    def is_equals(self, other):
+        if isinstance(other, Library):
+            return Number(int(self.lib_name == other.lib_name)), None
+        else:
+            return Number(0), None
+
+    @staticmethod
+    def is_true():
+        return True
+
+    @staticmethod
+    def boolean():
+        return Number(1)
+
+    @staticmethod
+    def length():
+        return -1
+
+    def __repr__(self):
+        return f"<(Library | Module) @ '{self.lib_name}'>"
+
+
 class BaseFunction(Value):
     def __init__(self, name):
         super().__init__()
-        self.name = name or '<anonymous'
+        self.name = name or '<anonymous>'
 
     def generate_new_context(self):
         new_context = Context(self.name, self.context, self.pos_start)
@@ -556,9 +589,9 @@ class BaseFunction(Value):
         new_context.symbol_table.set("true", true)
         new_context.symbol_table.set("false", false)
         for var_name, value in self.context.symbol_table.symbols.items():
-            if isinstance(value, Function) or isinstance(value, BuiltinFunction):
+            if isinstance(value, Function) or isinstance(value, BuiltinFunction) or \
+                isinstance(value, dict):
                 new_context.symbol_table.set(var_name, value)
-
         return new_context
 
     def check_args(self, arg_names, args):
@@ -831,8 +864,24 @@ class SymbolTable:
             return self.parent.get(name)
         return value
 
-    def set(self, name, value):
-        self.symbols[name] = value
+    def set(self, name, value, father=None):
+        def father_dict(d, iter_list, name, value):
+            current_dict = d
+
+            for i, key in enumerate(iter_list):
+                if key not in current_dict:
+                    current_dict[key] = {}
+                current_dict = current_dict[key]
+
+            current_dict[name] = value
+
+            return d
+        if father is None:
+            self.symbols[name] = value
+        elif isinstance(father, list):
+            self.symbols = father_dict(self.symbols, father, name, value)
+        else:
+            raise Exception("father should be list")
 
     def remove(self, name):
         del self.symbols[name]
@@ -846,6 +895,7 @@ ESCAPE = {
     "Array": Array,
     "Function": Function,
     "BuiltinFunction": BuiltinFunction,
+    "Library": Library,
 }
 
 
@@ -865,6 +915,16 @@ class Interpreter:
     @staticmethod
     def visit_NumberNode(node, context, father):
         return Parser.RTResult().success(Number(node.tok.value).set_pos(node.pos_start, node.pos_end))
+
+    def visit_ClusterNode(self, node, context, father):
+        res = Parser.RTResult()
+        cluster = []
+
+        for cluster_node in node.cluster_nodes:
+            cluster.append(res.register(self.visit(cluster_node, context, father)))
+            if res.should_return(): return res
+
+        return res.success(Null())
 
     def visit_ArrayNode(self, node, context, father):
         res = Parser.RTResult()
@@ -890,61 +950,81 @@ class Interpreter:
             return res.success(String(str(structure[0])).set_pos(node.pos_start, node.pos_end))
         return res.success(Structure(structure).set_pos(node.pos_start, node.pos_end))
 
-    def visit_ClusterNode(self, node, context, father):
+    @staticmethod
+    def visit_IncludeNode(node, context, father):
         res = Parser.RTResult()
-        cluster = []
 
-        for cluster_node in node.cluster_nodes:
-            cluster.append(res.register(self.visit(cluster_node, context, father)))
-            if res.should_return(): return res
+        lib_name = node.file_name_tok.value
+
+        try:
+            with open(f"{lib_name}.tl", "r", encoding="utf-8") as f:
+                scripts = f.read()
+        except FileNotFoundError:
+            return Parser.RTResult().failure(
+                Error.InvalidValueError(
+                    node.pos_start, node.pos_end,
+                    f"'{lib_name}' is not a module or library"
+                )
+            )
+        error = execute(f"<shell>", scripts, [lib_name], False)
+
+        if error:
+            return Parser.RTResult().failure(
+                Error.RunningTimeError(
+                    node.pos_start, node.pos_end,
+                    f"Failed to load '{lib_name}'\n\n"
+                    f"During this error, discover another error:\n\n"
+                    f"{error}"
+                )
+            )
+        context.symbol_table.set(lib_name, Library(lib_name).set_pos(node.pos_start, node.pos_end), [lib_name])
 
         return res.success(Null())
 
     def visit_FatherCallChildNode(self, node, context, father):
         res = Parser.RTResult()
 
-        father_node = node.father_node
-        child_node = node.child_node
-
+        father_tok_list = node.father_list
         father_list = []
-        for fnd in father_node:
-            father_list.append(fnd.value)
-
-        value = res.register(self.visit(Parser.VarAccessNode(child_node), context, father_list))
+        for ftl in father_tok_list:
+            father_list.append(ftl.value)
+        child = res.register(self.visit(node.child_tok, context, father_list))
         if res.should_return(): return res
 
-        return res.success(String(value).set_pos(node.pos_start, node.pos_end))
+        return res.success(child)
 
     @staticmethod
     def visit_VarAccessNode(node, context, father):
         res = Parser.RTResult()
         var_name = node.var_name_tok.value
-        value = context.symbol_table.get(var_name)
-        if value is None:
-            return res.failure(
-                Error.DefinedError(
-                    node.pos_start, node.pos_end,
-                    f"'{var_name}' is not defined")
-            )
-
-        if father is not None:
+        if father is None:
+            value = context.symbol_table.get(var_name)
+            if value is None:
+                return res.failure(
+                    Error.DefinedError(
+                        node.pos_start, node.pos_end,
+                        f"'{var_name}' is not defined")
+                )
+            value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+        else:
+            symbol = context.symbol_table.symbols
             for f in father:
-                if isinstance(value, dict):
-                    if f in value.keys():
-                        value = value[f].symbol_table.get(f)
-                    else:
-                        return res.failure(
-                            Error.DefinedError(
-                                node.pos_start, node.pos_end,
-                                f"'{var_name}' is not defined")
-                        )
-                else:
+                try:
+                    symbol = symbol[f]
+                except KeyError:
                     return res.failure(
-                        Error.RunningTimeError(
+                        Error.DefinedError(
                             node.pos_start, node.pos_end,
-                            f"'{var_name}' can't called child")
+                            f"'{f}' is not defined")
                     )
-        value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+            try:
+                value = symbol[var_name]
+            except KeyError:
+                return res.failure(
+                    Error.DefinedError(
+                        node.pos_start, node.pos_end,
+                        f"'{var_name}' is not defined")
+                )
         return res.success(value)
 
     def visit_VarAssignNode(self, node, context, father):
@@ -954,8 +1034,7 @@ class Interpreter:
         if isinstance(value, Null):
             ESCAPE.update({"Null": value.type})
         if res.should_return(): return res
-
-        context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value)
+        context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
         return res.success(
             Null(
                 ESCAPE[str(type(value).__name__)],
@@ -1017,7 +1096,7 @@ class Interpreter:
             condition = lambda: i + 1 > int(end_value.value)
 
         while condition():
-            context.symbol_table.set(node.var_name_tok.value, Number(i))
+            context.symbol_table.set(node.var_name_tok.value, Number(i), father)
             i += int(step_value.value)
 
             res.register(self.visit(node.body_node, context, father))
@@ -1073,8 +1152,7 @@ class Interpreter:
         ).set_context(context).set_pos(node.pos_start, node.pos_end)
 
         if node.var_name_tok:
-            context.symbol_table.set(func_name, func_value)
-
+            context.symbol_table.set(func_name, func_value, father)
         return res.success(Null())
 
     def visit_CallFunctionNode(self, node, context, father):
@@ -1192,7 +1270,7 @@ global_symbol_table.set("length", len_)
 global_symbol_table.set("run", run_)
 
 
-def execute(fn, syntax, father=None):
+def execute(fn, syntax, father=None, return_result=True):
     # 获取Token
     error, tokens = Token.Lexer(fn, syntax).make_tokens()
     if error is not None: return error.as_string()
@@ -1213,6 +1291,9 @@ def execute(fn, syntax, father=None):
         if isinstance(result.value.elements[0], Null):
             return None
         else:
-            return result.value
+            if return_result:
+                return result.value
+            else:
+                return None
     else:
         return result.error.as_string()

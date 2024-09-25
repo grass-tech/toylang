@@ -203,15 +203,21 @@ class ReturnNode:
         self.pos_end = pos_end
 
 
-# 其他
-# 父调用子
-class FatherCallChildNode:
-    def __init__(self, father_node, child_node):
-        self.father_node = father_node
-        self.child_node = child_node
+class IncludeNode:
+    def __init__(self, file_name_tok):
+        self.file_name_tok = file_name_tok
 
-        self.pos_start = self.father_node[0].pos_start
-        self.pos_end = self.child_node.pos_end
+        self.pos_start = self.file_name_tok.pos_start
+        self.pos_end = self.file_name_tok.pos_end
+
+
+class FatherCallChildNode:
+    def __init__(self, father_list, child_tok):
+        self.father_list = father_list
+        self.child_tok = child_tok
+
+        self.pos_start = self.father_list[0].pos_start
+        self.pos_end = self.child_tok.pos_end
 
 
 class ParserResult:
@@ -420,23 +426,19 @@ class Parser:
                 return res.success(VarAssignNode(identifier, VarAccessNode(tok)))
 
             elif self.current_tok.type == Token.TTP_DOT:
+                father_list = [tok]
                 res.register_advancement()
                 self.advanced()
-
-                child_list = []
-                while True:
-                    if self.current_tok.type != Token.TTT_IDENTIFIER:
-                        break
-                    child_list.append(self.current_tok)
-
+                while self.current_tok.type not in (Token.TTT_EOF, Token.TTT_NEWLINE):
+                    if self.current_tok.type == Token.TTP_DOT:
+                        res.register_advancement()
+                        self.advanced()
+                        continue
+                    father_list.append(res.register(self.expr()))
+                    if res.error: return res
                     res.register_advancement()
                     self.advanced()
-                    if self.current_tok.type != Token.TTP_DOT:
-                        break
-                    res.register_advancement()
-                    self.advanced()
-
-                return res.success(FatherCallChildNode(child_list, tok))
+                return res.success(FatherCallChildNode(father_list[:-1], father_list[-1]))
 
             return res.success(VarAccessNode(tok))
 
@@ -486,6 +488,22 @@ class Parser:
             delete_expr = res.register(self.delete_expr())
             if res.error: return res
             return res.success(DeleteNode(delete_expr))
+
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "include"):
+            res.register_advancement()
+            self.advanced()
+
+            if self.current_tok.type != Token.TTT_IDENTIFIER:
+                return res.failure(Error.InvalidTypeError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Not modules's type"
+                ))
+            library_name = self.current_tok
+
+            res.register_advancement()
+            self.advanced()
+
+            return res.success(IncludeNode(library_name))
 
         return res.failure(
             Error.InvalidSyntaxError(
@@ -595,7 +613,6 @@ class Parser:
         statements.append(statement)
 
         more_statements = True
-
         while True:
             newline_count = 0
             while self.current_tok.type == Token.TTT_NEWLINE:
@@ -662,7 +679,10 @@ class Parser:
         self.advanced()
 
         if self.current_tok.type != Token.TTT_EOF:
-            element_nodes.append(res.register(self.statements()))
+            if NodeType == ClusterNode:
+                element_nodes.append(res.register(self.statements()))
+            else:
+                element_nodes.append(res.register(self.expr()))
         if res.error:
             return res.failure(
                     Error.InvalidSyntaxError(
@@ -673,7 +693,10 @@ class Parser:
             res.register_advancement()
             self.advanced()
 
-            element_nodes.append(res.register(self.statements()))
+            if NodeType == ClusterNode:
+                element_nodes.append(res.register(self.statements()))
+            else:
+                element_nodes.append(res.register(self.expr()))
             if res.error: return res
 
         self.tokens, self.tok_idx = original_tokens, original_idx
