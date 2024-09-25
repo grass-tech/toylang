@@ -23,21 +23,3 @@ function abs(n) {
         return n;
     }
 }
-
-function cos(n) {
-    var result = 0;
-    for x from 0 to 9 {
-        var term = (-1)**x * n**(2 * x) / math.factorial(2*x);
-        var result = result + term;
-    }
-    return result;
-}
-
-function sin(n) {
-    var result = 0;
-    for x from 0 to 9 {
-        var term = (-1) ** x * n ** (2 * x + 1) / math.factorial(2 * x + 1);
-        var result = result + term;
-    }
-    return result;
-}
