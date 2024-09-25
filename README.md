@@ -33,7 +33,9 @@ A python simple programming language，一个简单的python编程语言
 | function | \<FunctionName> {\<CodesCluster>}                                                              |  构建函数  |
 |  delete  | \<Variable>                                                                                    |  删除变量  |
 |  return  | \<Expression*>                                                                                 |  函数返回  |
-| include  | \<Library> \| \<Module>                                                                          | 导入库或模块 |
+| break    | NULL                                                                                           |  跳出循环  |
+| continue | NULL                                                                                          | 跳出本次循环 |
+| include  | \<Library> \| \<Module>                                                                       | 导入库或模块 |
 
 |   内置函数   |           用法            |    用途    |
 |:--------:|:-----------------------:|:--------:|
