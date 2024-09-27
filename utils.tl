@@ -30,3 +30,12 @@ function map(func, ld) {
 function access(ld, i) {
     return ld[i];
 }
+
+function test() {
+    /* test */
+    var a = 0;
+    repeat meet a <= 10 {
+        var a = a + 1;
+        println(a);
+    }
+}

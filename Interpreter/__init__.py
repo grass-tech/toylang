@@ -655,7 +655,7 @@ class Function(BaseFunction):
         value = res.register(interpreter.visit(self.body_node, exec_ctf, None))
         if res.should_return() and res.function_return_value is None: return res
 
-        return_value = (value if self.should_return_null else None) or res.function_return_value or Number.null
+        return_value = (value if self.should_return_null else None) or res.function_return_value or Null()
         return res.success(return_value)
 
     def copy(self):
@@ -1175,7 +1175,7 @@ class Interpreter:
         return_value = res.register(value_to_call.execute(args))
         if res.should_return(): return res
         if isinstance(return_value, Null):
-            return res.success(Number.null)
+            return res.success(Null())
         else:
             try:
                 return_value = return_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
@@ -1189,7 +1189,7 @@ class Interpreter:
             value = res.register(self.visit(node.node_to_return, context, father))
             if res.should_return(): return res
         else:
-            value = Number.null
+            value = Null()
         return res.success_return(value)
 
     def visit_BindOperationNode(self, node, context, father):
