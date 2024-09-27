@@ -576,9 +576,10 @@ class Library(Value):
 
 
 class BaseFunction(Value):
-    def __init__(self, name):
+    def __init__(self, name, father):
         super().__init__()
         self.name = name or '<anonymous>'
+        self.father = father
 
     def generate_new_context(self):
         new_context = Context(self.name, self.context, self.pos_start)
@@ -589,9 +590,13 @@ class BaseFunction(Value):
         new_context.symbol_table.set("true", true)
         new_context.symbol_table.set("false", false)
         for var_name, value in self.context.symbol_table.symbols.items():
-            if isinstance(value, Function) or isinstance(value, BuiltinFunction) or \
-                isinstance(value, dict):
+            if isinstance(value, Function) or isinstance(value, BuiltinFunction):
                 new_context.symbol_table.set(var_name, value)
+            if self.father is not None:
+                if isinstance(value, dict) and str(var_name) == self.father[0]:
+                    for dict_key, dict_value in value.items():
+                        new_context.symbol_table.set(dict_key, dict_value)
+
         return new_context
 
     def check_args(self, arg_names, args):
@@ -633,8 +638,8 @@ class BaseFunction(Value):
 
 # 函数
 class Function(BaseFunction):
-    def __init__(self, name, body_node, arg_names, should_return_null):
-        super().__init__(name)
+    def __init__(self, name, body_node, arg_names, should_return_null, father):
+        super().__init__(name, father)
         self.body_node = body_node
         self.arg_names = arg_names
         self.should_return_null = should_return_null
@@ -654,7 +659,7 @@ class Function(BaseFunction):
         return res.success(return_value)
 
     def copy(self):
-        copy = Function(self.name, self.body_node, self.arg_names, self.should_return_null)
+        copy = Function(self.name, self.body_node, self.arg_names, self.should_return_null, self.father)
         copy.set_context(self.context)
         copy.set_pos(self.pos_start, self.pos_end)
         return copy
@@ -682,9 +687,10 @@ class Function(BaseFunction):
 
 
 class BuiltinFunction(BaseFunction):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, father):
+        super().__init__(name, father)
         self.name = name
+        self.father = father
 
     def execute(self, args):
         res = Parser.RTResult()
@@ -810,7 +816,7 @@ class BuiltinFunction(BaseFunction):
     execute_array.arg_names = ["value"]
 
     def copy(self):
-        copy = BuiltinFunction(self.name)
+        copy = BuiltinFunction(self.name, self.father)
         copy.set_context(self.context)
         copy.set_pos(self.pos_start, self.pos_end)
         return copy
@@ -834,15 +840,15 @@ class BuiltinFunction(BaseFunction):
                 f"{id(f'{self.name}')}>")
 
 
-println = BuiltinFunction.println = BuiltinFunction("println")
-readline = BuiltinFunction.readline = BuiltinFunction("readline")
-len_ = BuiltinFunction.len = BuiltinFunction("len")
-int_ = BuiltinFunction.int = BuiltinFunction("int")
-str_ = BuiltinFunction.str = BuiltinFunction("str")
-float_ = BuiltinFunction.float = BuiltinFunction("float")
-bool_ = BuiltinFunction.bool = BuiltinFunction("bool")
-array = BuiltinFunction.array = BuiltinFunction("array")
-run_ = BuiltinFunction.run_ = BuiltinFunction("run")
+println = BuiltinFunction.println = BuiltinFunction("println", None)
+readline = BuiltinFunction.readline = BuiltinFunction("readline", None)
+len_ = BuiltinFunction.len = BuiltinFunction("len", None)
+int_ = BuiltinFunction.int = BuiltinFunction("int", None)
+str_ = BuiltinFunction.str = BuiltinFunction("str", None)
+float_ = BuiltinFunction.float = BuiltinFunction("float", None)
+bool_ = BuiltinFunction.bool = BuiltinFunction("bool", None)
+array = BuiltinFunction.array = BuiltinFunction("array", None)
+run_ = BuiltinFunction.run_ = BuiltinFunction("run", None)
 
 
 class Context:
@@ -1148,7 +1154,7 @@ class Interpreter:
         body_node = node.body_node
         arg_names = [arg_name.value for arg_name in node.arg_name_toks]
         func_value = Function(
-            func_name, body_node, arg_names, node.should_auto_return
+            func_name, body_node, arg_names, node.should_auto_return, father
         ).set_context(context).set_pos(node.pos_start, node.pos_end)
 
         if node.var_name_tok:

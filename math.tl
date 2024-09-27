@@ -18,8 +18,20 @@ function factorial(n) {
 
 function abs(n) {
     if n < 0 {
-        return 0-n;
+        return -n;
     } else {
         return n;
     }
+}
+
+function test() {
+    var result = [];
+    var result = result + pow(2, 2);
+    var result = result + pow(2, 3)
+    var result = result + factorial(5);
+    var result = result + factorial(3);
+    var result = result + abs(5);
+    var result = result + abs(-5)
+    println(['(math.pow(2, 2))', '(math.factorial(5))', '(math.abs(5)', '(math.pow(2, 3))', '(math.factorial(3))', '(math.abs(-5)']);
+    return result;
 }

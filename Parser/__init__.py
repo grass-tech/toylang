@@ -516,7 +516,7 @@ class Parser:
         res = ParserResult()
         tok = self.current_tok
 
-        if tok.type in (Token.TCP_PLUS, Token.TCP_PLUS):
+        if tok.type in (Token.TCP_PLUS, Token.TCP_MINUS):
             res.register_advancement()
             self.advanced()
             factor = res.register(self.factor())
