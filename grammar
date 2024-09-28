@@ -50,6 +50,10 @@ function <FuncName> {println('enter function')}
               ^
               |
           AS Character
+    ([Array] | [String])[<Number> | <Variable>] 切片 Subscripts
+                                   ^
+                                   |
+                                 Index
 
 低级Least: Number <- (PLUS | MINUS) -> Number
 中等Middle: Number <- (MUL | DIV) -> Number
