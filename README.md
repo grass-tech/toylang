@@ -104,6 +104,18 @@ true ? "值为真" : "值为假"
 true -> True
 ```
 
+### 切片 Subscripts
+
+用法
+
+```txt
+(<Variable> | [Array] | [String])[<Variable> | [Number]]
+              ^                          ^
+              |                          |
+           被切片的                      索引
+```
+
+
 ## 代码示例 Code Example
 
 - **奇偶数判断**
