@@ -32,7 +32,8 @@ A python simple programming language，一个简单的python编程语言
 |    if    | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |   如果   |
 |  elseif  | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |  否则如果  |
 |   else   | {\<CodesCluster>}                                                                              |   否则   |
-|   for    | \<Variable> from \<Expression*> to \<Expression*> (step \<Expression* -> 1>) {\<CodesCluster>} |  迭代循环  |
+|   for    | \<Variable> from \<Expression*> to \<Expression*> (step \<Expression* -> 1>) {\<CodesCluster>} |  次数循环  |
+|  foriter | \<Variable> by (\<Variable> | \[Array])                                                        |  迭代循环  |
 |  repeat  | (meet \| until)  \<Expression*> {\<CodesCluster>}                                              |  条件循环  |
 | function | \<FunctionName> {\<CodesCluster>}                                                              |  构建函数  |
 |  delete  | \<Variable>                                                                                    |  删除变量  |
