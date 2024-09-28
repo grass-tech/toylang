@@ -137,6 +137,16 @@ class ForNode:
         self.pos_end = self.body_node.pos_end
 
 
+class ForiterNode:
+    def __init__(self, var_name_tok, iter_node, body_node):
+        self.var_name_tok = var_name_tok
+        self.iter_node = iter_node
+        self.body_node = body_node
+
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.body_node.pos_end
+
+
 class RepeatNode:
     def __init__(self, condition_node, body_node, type_: str, should_return_null):
         self.condition_node = condition_node
@@ -209,6 +219,15 @@ class IncludeNode:
 
         self.pos_start = self.file_name_tok.pos_start
         self.pos_end = self.file_name_tok.pos_end
+
+
+class SubscriptsNode:
+    def __init__(self, value_node, index_node_list):
+        self.value_node = value_node
+        self.index_node_list = index_node_list
+
+        self.pos_start = self.value_node.pos_start
+        self.pos_end = self.index_node_list[-1].pos_end
 
 
 class FatherCallChildNode:
@@ -359,6 +378,25 @@ class Parser:
         elif tok.type == Token.TTT_STR:
             res.register_advancement()
             self.advanced()
+            if self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                return res.success(SubscriptsNode(StringNode(tok), index_list))
             return res.success(StringNode(tok))
 
         # 对标识符的判断
@@ -440,6 +478,26 @@ class Parser:
                     self.advanced()
                 return res.success(FatherCallChildNode(father_list[:-1], father_list[-1]))
 
+            elif self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                return res.success(SubscriptsNode(VarAccessNode(tok), index_list))
+
             return res.success(VarAccessNode(tok))
 
         # 对结构的判断
@@ -452,6 +510,25 @@ class Parser:
         elif tok.type == Token.TTT_ARRAY:
             array_expr = res.register(self._include_expr(ArrayNode, Token.TTP_COMMA))
             if res.error: return res
+            if self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                return res.success(SubscriptsNode(array_expr, index_list))
             return res.success(array_expr)
 
         # 代码簇
@@ -466,6 +543,12 @@ class Parser:
             if_expr = res.register(self.if_expr())
             if res.error: return res
             return res.success(if_expr)
+
+        # 对迭代的判断
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "foriter"):
+            foriter_expr = res.register(self.foriter_expr())
+            if res.error: return res
+            return res.success(foriter_expr)
 
         # 对循环的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "for"):
@@ -915,6 +998,62 @@ class Parser:
 
         return res.success(ForNode(var_name, start_value, end_value, step_value, body, False))
 
+    def foriter_expr(self):
+        res = ParserResult()
+
+        if not self.current_tok.matches(Token.TTT_KEYWORD, "foriter"):
+            return res.failure(
+                Error.InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                    "expected 'foriter'"))
+
+        res.register_advancement()
+        self.advanced()
+
+        if self.current_tok.type != Token.TTT_IDENTIFIER:
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "lost variable"))
+
+        var_name = self.current_tok
+        res.register_advancement()
+        self.advanced()
+
+        if not self.current_tok.matches(Token.TTT_KEYWORD, "by"):
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "expected 'by'"))
+
+        res.register_advancement()
+        self.advanced()
+
+        if self.current_tok.type == Token.TTT_ARRAY:
+            iter_expr = res.register(self.expr())
+            if res.error: return res
+
+        elif self.current_tok.type == Token.TTT_IDENTIFIER:
+            iter_expr = res.register(res.success(VarAccessNode(self.current_tok)))
+            if res.error: return res
+
+            res.register_advancement()
+            self.advanced()
+
+        else:
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "expected 'array' or 'identifier'"))
+
+        if self.current_tok.type != Token.TTT_CLUSTER:
+            return res.failure(
+                Error.InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                    "expected '{'")
+            )
+
+        body = res.register(self._include_expr(ClusterNode, Token.TTP_SEMI))
+        if res.error: return res
+
+        return res.success(ForiterNode(var_name, iter_expr, body))
     def repeat_expr(self):
         res = ParserResult()
 

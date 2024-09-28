@@ -1,7 +1,7 @@
 /* Multiple Function Package File */
 
-/* fibonacci */
-function fib(n) {
+/* fibonacci with factorial*/
+function factorial_fib(n) {
     var result = [];
     function factor(i) {
         if i < 2 {
@@ -17,6 +17,19 @@ function fib(n) {
     return result
 }
 
+/* fibonacci with Repeat */
+function repeat_fib(n) {
+    var result = [];
+    for i from 0 to n {
+        if i <= 1 {
+            var result = result + [1];
+        } else {
+            var result = result + (result[i-2] + result[i-1]);
+        }
+    }
+    return result;
+}
+
 /* mapping function */
 function map(func, ld) {
     var result = [];
@@ -29,13 +42,4 @@ function map(func, ld) {
 /* access array element(s) */
 function access(ld, i) {
     return ld[i];
-}
-
-function test() {
-    /* test */
-    var a = 0;
-    repeat meet a <= 10 {
-        var a = a + 1;
-        println(a);
-    }
 }

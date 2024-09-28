@@ -3,6 +3,7 @@ import ast
 
 import sys
 import os
+import decimal
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Token
@@ -189,7 +190,7 @@ class Number(Value):
     def powered_by(self, other):
         if isinstance(other, Number):
             left, right = self.get_num(self.value, other.value)
-            return Number(left ** right), None
+            return Number(decimal.Decimal(str(left)) ** right), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'**' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
@@ -999,6 +1000,36 @@ class Interpreter:
 
         return res.success(child)
 
+    def visit_SubscriptsNode(self, node, context, father):
+        res = Parser.RTResult()
+
+        value_node = res.register(self.visit(node.value_node, context, father))
+        if res.should_return(): return res
+        index_node_list = node.index_node_list
+        index_list = []
+        for inl in index_node_list:
+            index_list.append(res.register(self.visit(inl, context, father)).value)
+            if res.should_return(): return res
+
+        if isinstance(value_node, Array):
+            value = value_node.elements
+        else:
+            value = value_node.value
+        for i in index_list:
+            try:
+                if isinstance(value, Array):
+                    value = value.elements
+                value = value[i]
+            except IndexError:
+                return res.failure(
+                    Error.OutOfRangeError(
+                        node.pos_start, node.pos_end, f"The index '{i}' is out of maximum range"))
+            except TypeError:
+                return res.failure(Error.InvalidTypeError(
+                    node.pos_start, node.pos_end, f"{type(value).__name__} not supported for subscripts"))
+
+        return res.success(value)
+
     @staticmethod
     def visit_VarAccessNode(node, context, father):
         res = Parser.RTResult()
@@ -1116,6 +1147,32 @@ class Interpreter:
 
         return res.success(Null())
 
+    def visit_ForiterNode(self, node, context, father):
+        res = Parser.RTResult()
+
+        foriter = res.register(self.visit(node.iter_node, context, father))
+        if not isinstance(foriter, Array):
+            return res.failure(
+                Error.InvalidTypeError(
+                    node.pos_start, node.pos_end,
+                    f"{type(foriter).__name__} not supported for iteration")
+            )
+
+        foriter = foriter.elements
+        for item in foriter:
+            context.symbol_table.set(node.var_name_tok.value, item, father)
+
+            res.register(self.visit(node.body_node, context, father))
+            if res.should_return() and \
+                res.loop_should_break is False and res.loop_should_continue is False: return res
+
+            if res.loop_should_break:
+                break
+            if res.loop_should_continue:
+                continue
+
+        return res.success(Null())
+
     def visit_RepeatNode(self, node, context, father):
         res = Parser.RTResult()
 
@@ -1193,10 +1250,19 @@ class Interpreter:
         return res.success_return(value)
 
     def visit_BindOperationNode(self, node, context, father):
+        escape_type = {
+            "int": Number,
+            "float": Number,
+            "str": String,
+        }
         res = Parser.RTResult()
         left = res.register(self.visit(node.left_node, context, father))
         if res.should_return(): return res
         right = res.register(self.visit(node.right_node, context, father))
+        if type(left).__name__ in escape_type.keys():
+            left = escape_type[type(left).__name__](left)
+        if type(right).__name__ in escape_type.keys():
+            right = escape_type[type(right).__name__](right)
         if res.should_return(): return res
         if node.op_tok.type == Token.TCP_PLUS:
             result, error = left.added_to(right)

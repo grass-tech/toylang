@@ -5,7 +5,7 @@ var e = 2.718281828459045
 var tau = 6.283185307179586
 
 function pow(n, p) {
-    return int(n) ** int(p);
+    return n ** p;
 }
 
 function factorial(n) {

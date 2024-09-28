@@ -2,7 +2,6 @@ import string
 
 import sys
 import os
-from typing import Literal
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Error
@@ -109,6 +108,9 @@ SYNTAX = [
     "if",
     "elseif",
     "else",
+
+    "foriter",
+    "by",
 
     "for",
     "from",
@@ -325,7 +327,7 @@ class Lexer:
             self._advanced()
         if char in preview.keys():
             if preview[char] == TTP_LEFT_COMMENT:
-                err = self._skip_comment("pos")
+                err = self._skip_comment()
                 if err:
                     return [err, None]
                 return [None, "null"]
@@ -436,24 +438,15 @@ class Lexer:
         tokens = tokens + [Token(TTT_EOF, pos_start=self._pos.copy(), pos_end=self._pos.copy())]
         return [None, tokens]
 
-    def _skip_comment(self, end: Literal['pos', 'line'] = 'pos'):
+    def _skip_comment(self):
         pos_start = self._pos.copy()
         self._advanced()
-        if end == 'pos':
-            condition = self._current_char != "*" and self._syntax[self._pos.idx + 1] != "/"
-        else:
-            condition = True
-        while condition:
+        while self._current_char != "*" and self._syntax[self._pos.idx + 1] != "/":
             if self._current_char is None:
-                if end == 'pos':
-                    return Error.InvalidSyntaxError(
-                        pos_start, self._pos.copy(),
-                        "expected '*/', did you forget '*/'?")
-                else:
-                    break
+                return Error.InvalidSyntaxError(
+                    pos_start, self._pos.copy(),
+                    "expected '*/', did you forget '*/'?")
             self._advanced()
-            if end == 'pos':
-                condition = self._current_char != "*" and self._syntax[self._pos.idx + 1] != "/"
         self._advanced()
         self._advanced()
         return None
