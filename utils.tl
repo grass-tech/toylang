@@ -1,6 +1,6 @@
-/* Multiple Function Package File */
+/* Multiple Function Package File 多函数包文件 */
 
-/* fibonacci with factorial*/
+/* fibonacci with factorial 递归斐波那契数列 */
 function factorial_fib(n) {
     var result = [];
     function factor(i) {
@@ -17,7 +17,7 @@ function factorial_fib(n) {
     return result
 }
 
-/* fibonacci with Repeat */
+/* fibonacci with Repeat 循环斐波那契数列 */
 function repeat_fib(n) {
     var result = [];
     for i from 0 to n {
@@ -42,4 +42,11 @@ function map(func, ld) {
 /* access array element(s) */
 function access(ld, i) {
     return ld[i];
+}
+
+/* Compute Running Time */
+function timer(func) {
+    var starttime = timestamp();
+    func();
+    return timestamp() - starttime;
 }

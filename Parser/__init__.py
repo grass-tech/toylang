@@ -133,8 +133,12 @@ class ForNode:
         self.body_node = body_node
         self.should_return_null = should_return_null
 
-        self.pos_start = self.var_name_tok.pos_start
-        self.pos_end = self.body_node.pos_end
+        if self.body_node is None:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.var_name_tok.pos_end
+        else:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.body_node.pos_end
 
 
 class ForiterNode:
@@ -143,8 +147,12 @@ class ForiterNode:
         self.iter_node = iter_node
         self.body_node = body_node
 
-        self.pos_start = self.var_name_tok.pos_start
-        self.pos_end = self.body_node.pos_end
+        if self.body_node is None:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.var_name_tok.pos_end
+        else:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.body_node.pos_end
 
 
 class RepeatNode:
@@ -154,8 +162,12 @@ class RepeatNode:
         self.type = type_
         self.should_return_null = should_return_null
 
-        self.pos_start = self.condition_node.pos_start
-        self.pos_end = self.body_node.pos_end
+        if self.body_node is None:
+            self.pos_start = self.condition_node.pos_start
+            self.pos_end = self.condition_node.pos_end
+        else:
+            self.pos_start = self.condition_node.pos_start
+            self.pos_end = self.body_node.pos_end
 
 
 # 循环控制节点
@@ -802,6 +814,8 @@ class Parser:
                     return res.success(ArrayNode(element_nodes, start, end))
                 if isinstance(result.value, Interpreter.Cluster):
                     return res.success(ClusterNode(element_nodes, start, end))
+        if NodeType == ClusterNode and not element_nodes:
+            return res.success(None)
         return res.success(NodeType(element_nodes, pos_start, self.current_tok.pos_end.copy()))
 
     def if_expr(self):
@@ -1054,6 +1068,7 @@ class Parser:
         if res.error: return res
 
         return res.success(ForiterNode(var_name, iter_expr, body))
+
     def repeat_expr(self):
         res = ParserResult()
 
@@ -1239,6 +1254,30 @@ class Parser:
 
             res.register_advancement()
             self.advanced()
+
+            if self.current_tok.type == Token.TTT_ARRAY:
+                call_expr = res.register(res.success(CallFunctionNode(builder, arg_nodes)))
+                if res.error: return res
+                if self.current_tok.type == Token.TTT_ARRAY:
+                    pos_start = self.current_tok.pos_start
+                    index_list = []
+                    while self.current_tok.type == Token.TTT_ARRAY:
+                        original_tokens, original_idx = self.tokens, self.tok_idx
+                        self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                        res.register_advancement()
+                        self.advanced()
+                        index_list.append(res.register(self.expr()))
+                        if res.error: return res
+
+                        self.tokens, self.tok_idx = original_tokens, original_idx
+                        res.register_advancement()
+                        self.advanced()
+
+                    if len(index_list) == 0:
+                        return res.failure(
+                            Error.InvalidValueError(pos_start, self.current_tok.pos_end, "The subscripts index is Null"))
+                    return res.success(SubscriptsNode(call_expr, index_list))
             return res.success(CallFunctionNode(builder, arg_nodes))
         return res.success(builder)
 

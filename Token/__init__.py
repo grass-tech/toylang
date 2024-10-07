@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Error
 
-punctuation = "!@#$%^&_;:<>,.?\\|`~([{" + string.whitespace
+punctuation = "!@#$%^&;:<>,.?\\|`~([{" + string.whitespace
 
 # 类型(Token Type)
 TTT_STR = "STR"
@@ -35,6 +35,7 @@ TTP_COLON = "COLON"  # :
 TTP_SEMI = TTT_NEWLINE  # ;
 TTP_ESCAPE = "ESCAPE"  # \
 TTP_AS = "AS"  # ->
+TTP_MACRO = "MACRO"  # #
 TTP_RIGHT_COMMENT = "RIGHT_COMMENT"  # /*
 TTP_LEFT_COMMENT = "LEFT_COMMENT"  # */
 ## 运算(Computing Pos)
@@ -151,7 +152,7 @@ class Position:
 
         if current_char == '\n':
             self.ln += 1
-            self.col = 0
+            self.col = -1
 
     def copy(self):
         return Position(self.idx, self.ln, self.col, self.fn, self.ftxt)
@@ -309,7 +310,7 @@ class Lexer:
         char = ""
         pos_start = self._pos.copy()
 
-        while self._current_char is not None and self._current_char in (string.ascii_letters + string.digits + "_"):
+        while self._current_char is not None and self._current_char in string.ascii_letters + string.digits + "_":
             char += self._current_char
             self._advanced()
 

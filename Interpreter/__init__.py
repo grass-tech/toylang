@@ -96,7 +96,9 @@ class Null(Value):
         self.value = value
 
     def get(self):
-        return self.type(self.value)
+        if self.type is not None:
+            return self.type(self.value)
+        return self.value
 
     @staticmethod
     def boolean():
@@ -546,17 +548,17 @@ class Cluster(Value):
 class Library(Value):
     def __init__(self, lib_name):
         super().__init__()
-        self.lib_name = lib_name
+        self.name = lib_name
 
     def copy(self):
-        copy = Library(self.lib_name)
+        copy = Library(self.name)
         copy.set_pos(self.pos_start, self.pos_end)
         copy.set_context(self.context)
         return copy
 
     def is_equals(self, other):
         if isinstance(other, Library):
-            return Number(int(self.lib_name == other.lib_name)), None
+            return Number(int(self.name == other.name)), None
         else:
             return Number(0), None
 
@@ -573,7 +575,7 @@ class Library(Value):
         return -1
 
     def __repr__(self):
-        return f"<(Library | Module) @ '{self.lib_name}'>"
+        return f"<(Library | Module) @ '{self.name}'>"
 
 
 class BaseFunction(Value):
@@ -597,6 +599,9 @@ class BaseFunction(Value):
                 if isinstance(value, dict) and str(var_name) == self.father[0]:
                     for dict_key, dict_value in value.items():
                         new_context.symbol_table.set(dict_key, dict_value)
+                    continue
+            if isinstance(value, dict):
+                new_context.symbol_table.set(var_name, value)
 
         return new_context
 
@@ -778,12 +783,10 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for int() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
-
     execute_int.arg_names = ["value"]
 
     def execute_str(self, exec_cft):
         return Parser.RTResult().success(String(str(exec_cft.symbol_table.get('value'))))
-
     execute_str.arg_names = ["value"]
 
     def execute_float(self, exec_cft):
@@ -795,12 +798,10 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for float() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
-
     execute_float.arg_names = ["value"]
 
     def execute_bool(self, exec_cft):
         return Parser.RTResult().success(exec_cft.symbol_table.get("value").boolean())
-
     execute_bool.arg_names = ["value"]
 
     def execute_array(self, exec_cft):
@@ -813,8 +814,36 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for array() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
-
     execute_array.arg_names = ["value"]
+
+    def execute_calllist(self, exec_cft):
+        if "name" not in dir(exec_cft.symbol_table.get("object")):
+            return Parser.RTResult().failure(
+                Error.DefinedError(
+                    self.pos_start, self.pos_end,
+                    f"Can't multiple call type for {type(exec_cft.symbol_table.get("object")).__name__}")
+            )
+
+        obj = str(exec_cft.symbol_table.get("object").name)
+        if obj not in exec_cft.symbol_table.symbols.keys():
+            return Parser.RTResult().failure(
+                Error.DefinedError(
+                    self.pos_start, self.pos_end,
+                    f"Not match object '{obj}'")
+            )
+        if not isinstance(exec_cft.symbol_table.symbols[obj], dict):
+            return Parser.RTResult().failure(
+                Error.InvalidTypeError(
+                    self.pos_start, self.pos_end,
+                    f"Can't multiple call with '{obj}'")
+            )
+        return Parser.RTResult().success(
+            Array(list(exec_cft.symbol_table.symbols[obj].keys())))
+    execute_calllist.arg_names = ["object"]
+
+    def execute_timestamp(self, exec_cft):
+        return Parser.RTResult().success(Number(__import__("time").time()))
+    execute_timestamp.arg_names = []
 
     def copy(self):
         copy = BuiltinFunction(self.name, self.father)
@@ -850,6 +879,8 @@ float_ = BuiltinFunction.float = BuiltinFunction("float", None)
 bool_ = BuiltinFunction.bool = BuiltinFunction("bool", None)
 array = BuiltinFunction.array = BuiltinFunction("array", None)
 run_ = BuiltinFunction.run_ = BuiltinFunction("run", None)
+calllist = BuiltinFunction.calllist = BuiltinFunction("calllist", None)
+timestamp = BuiltinFunction.timestamp = BuiltinFunction("timestamp", None)
 
 
 class Context:
@@ -984,6 +1015,21 @@ class Interpreter:
                     f"{error}"
                 )
             )
+        # 往局部变量添加特定变量
+        context.symbol_table.set("null", null, [lib_name])
+        context.symbol_table.set("true", true, [lib_name])
+        context.symbol_table.set("false", false, [lib_name])
+        for var_name, value in context.symbol_table.symbols.items():
+            if isinstance(value, Function) or isinstance(value, BuiltinFunction):
+                context.symbol_table.set(var_name, value, [lib_name])
+            if father is not None:
+                if isinstance(value, dict) and str(var_name) == father[0]:
+                    for dict_key, dict_value in value.items():
+                        context.symbol_table.set(dict_key, dict_value, [lib_name])
+                    continue
+            if isinstance(value, dict):
+                context.symbol_table.set(var_name, value, [lib_name])
+        # 添加库名
         context.symbol_table.set(lib_name, Library(lib_name).set_pos(node.pos_start, node.pos_end), [lib_name])
 
         return res.success(Null())
@@ -994,6 +1040,9 @@ class Interpreter:
         father_tok_list = node.father_list
         father_list = []
         for ftl in father_tok_list:
+            if "value" not in dir(ftl):
+                father_list.append(self.visit(node.child_tok, context, father_list))
+                continue
             father_list.append(ftl.value)
         child = res.register(self.visit(node.child_tok, context, father_list))
         if res.should_return(): return res
@@ -1042,7 +1091,10 @@ class Interpreter:
                         node.pos_start, node.pos_end,
                         f"'{var_name}' is not defined")
                 )
-            value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+            if not isinstance(value, dict):
+                value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+            else:
+                value = value[var_name].copy().set_pos(node.pos_start, node.pos_end).set_context(context)
         else:
             symbol = context.symbol_table.symbols
             for f in father:
@@ -1136,9 +1188,11 @@ class Interpreter:
             context.symbol_table.set(node.var_name_tok.value, Number(i), father)
             i += int(step_value.value)
 
+            if node.body_node is None: break
             res.register(self.visit(node.body_node, context, father))
             if res.should_return() and \
                 res.loop_should_break is False and res.loop_should_continue is False: return res
+
 
             if res.loop_should_break:
                 break
@@ -1162,6 +1216,7 @@ class Interpreter:
         for item in foriter:
             context.symbol_table.set(node.var_name_tok.value, item, father)
 
+            if node.body_node is None: break
             res.register(self.visit(node.body_node, context, father))
             if res.should_return() and \
                 res.loop_should_break is False and res.loop_should_continue is False: return res
@@ -1185,9 +1240,11 @@ class Interpreter:
             elif node.type == "meet" and not condition.is_true():
                 break
 
+            if node.body_node is None: break
             res.register(self.visit(node.body_node, context, father))
             if res.should_return() and \
                 res.loop_should_break is False and res.loop_should_continue is False: return res
+
             if res.loop_should_break:
                 break
             if res.loop_should_continue:
@@ -1338,6 +1395,8 @@ global_symbol_table.set("string", str_)
 global_symbol_table.set("boolean", bool_)
 global_symbol_table.set("array", array)
 
+global_symbol_table.set("timestamp", timestamp)
+global_symbol_table.set("calllist", calllist)
 global_symbol_table.set("length", len_)
 global_symbol_table.set("run", run_)
 
