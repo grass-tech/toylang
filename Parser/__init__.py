@@ -133,8 +133,26 @@ class ForNode:
         self.body_node = body_node
         self.should_return_null = should_return_null
 
-        self.pos_start = self.var_name_tok.pos_start
-        self.pos_end = self.body_node.pos_end
+        if self.body_node is None:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.var_name_tok.pos_end
+        else:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.body_node.pos_end
+
+
+class ForiterNode:
+    def __init__(self, var_name_tok, iter_node, body_node):
+        self.var_name_tok = var_name_tok
+        self.iter_node = iter_node
+        self.body_node = body_node
+
+        if self.body_node is None:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.var_name_tok.pos_end
+        else:
+            self.pos_start = self.var_name_tok.pos_start
+            self.pos_end = self.body_node.pos_end
 
 
 class RepeatNode:
@@ -144,8 +162,12 @@ class RepeatNode:
         self.type = type_
         self.should_return_null = should_return_null
 
-        self.pos_start = self.condition_node.pos_start
-        self.pos_end = self.body_node.pos_end
+        if self.body_node is None:
+            self.pos_start = self.condition_node.pos_start
+            self.pos_end = self.condition_node.pos_end
+        else:
+            self.pos_start = self.condition_node.pos_start
+            self.pos_end = self.body_node.pos_end
 
 
 # 循环控制节点
@@ -203,15 +225,30 @@ class ReturnNode:
         self.pos_end = pos_end
 
 
-# 其他
-# 父调用子
-class FatherCallChildNode:
-    def __init__(self, father_node, child_node):
-        self.father_node = father_node
-        self.child_node = child_node
+class IncludeNode:
+    def __init__(self, file_name_tok):
+        self.file_name_tok = file_name_tok
 
-        self.pos_start = self.father_node[0].pos_start
-        self.pos_end = self.child_node.pos_end
+        self.pos_start = self.file_name_tok.pos_start
+        self.pos_end = self.file_name_tok.pos_end
+
+
+class SubscriptsNode:
+    def __init__(self, value_node, index_node_list):
+        self.value_node = value_node
+        self.index_node_list = index_node_list
+
+        self.pos_start = self.value_node.pos_start
+        self.pos_end = self.index_node_list[-1].pos_end
+
+
+class FatherCallChildNode:
+    def __init__(self, father_list, child_tok):
+        self.father_list = father_list
+        self.child_tok = child_tok
+
+        self.pos_start = self.father_list[0].pos_start
+        self.pos_end = self.child_tok.pos_end
 
 
 class ParserResult:
@@ -353,6 +390,25 @@ class Parser:
         elif tok.type == Token.TTT_STR:
             res.register_advancement()
             self.advanced()
+            if self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                return res.success(SubscriptsNode(StringNode(tok), index_list))
             return res.success(StringNode(tok))
 
         # 对标识符的判断
@@ -377,7 +433,8 @@ class Parser:
                 right_value = res.register(self.expr())
                 if res.error: return res
 
-                var_result = Interpreter.Interpreter().visit(VarAccessNode(tok), self.context, None)
+                var_result = Interpreter.Interpreter().visit(
+                    VarAccessNode(tok), self.context, None, {'println': print, 'readline': input})
                 if int(str(var_result.value.boolean())):
                     ternary_result = left_value
                 else:
@@ -385,7 +442,8 @@ class Parser:
 
                 # 处理节点
                 if "tok" not in dir(ternary_result):
-                    ternary_result = Interpreter.Interpreter().visit(ternary_result, self.context, None).value
+                    ternary_result = Interpreter.Interpreter().visit(
+                        ternary_result, self.context, None, {'println': print, 'readline': input}).value
                     error, tokens = Token.Lexer("<shell>", str(ternary_result.value)).make_tokens()
                     if error is not None: return error.as_string()
                     parser = Parser(tokens, "<shell>", self.context)
@@ -420,23 +478,39 @@ class Parser:
                 return res.success(VarAssignNode(identifier, VarAccessNode(tok)))
 
             elif self.current_tok.type == Token.TTP_DOT:
+                father_list = [tok]
                 res.register_advancement()
                 self.advanced()
+                while self.current_tok.type not in (Token.TTT_EOF, Token.TTT_NEWLINE):
+                    if self.current_tok.type == Token.TTP_DOT:
+                        res.register_advancement()
+                        self.advanced()
+                        continue
+                    father_list.append(res.register(self.expr()))
+                    if res.error: return res
+                    res.register_advancement()
+                    self.advanced()
+                return res.success(FatherCallChildNode(father_list[:-1], father_list[-1]))
 
-                child_list = []
-                while True:
-                    if self.current_tok.type != Token.TTT_IDENTIFIER:
-                        break
-                    child_list.append(self.current_tok)
+            elif self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
 
                     res.register_advancement()
                     self.advanced()
-                    if self.current_tok.type != Token.TTP_DOT:
-                        break
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
                     res.register_advancement()
                     self.advanced()
 
-                return res.success(FatherCallChildNode(child_list, tok))
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                return res.success(SubscriptsNode(VarAccessNode(tok), index_list))
 
             return res.success(VarAccessNode(tok))
 
@@ -450,6 +524,25 @@ class Parser:
         elif tok.type == Token.TTT_ARRAY:
             array_expr = res.register(self._include_expr(ArrayNode, Token.TTP_COMMA))
             if res.error: return res
+            if self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                return res.success(SubscriptsNode(array_expr, index_list))
             return res.success(array_expr)
 
         # 代码簇
@@ -464,6 +557,12 @@ class Parser:
             if_expr = res.register(self.if_expr())
             if res.error: return res
             return res.success(if_expr)
+
+        # 对迭代的判断
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "foriter"):
+            foriter_expr = res.register(self.foriter_expr())
+            if res.error: return res
+            return res.success(foriter_expr)
 
         # 对循环的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "for"):
@@ -487,6 +586,22 @@ class Parser:
             if res.error: return res
             return res.success(DeleteNode(delete_expr))
 
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "include"):
+            res.register_advancement()
+            self.advanced()
+
+            if self.current_tok.type != Token.TTT_IDENTIFIER:
+                return res.failure(Error.InvalidTypeError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Not modules's type"
+                ))
+            library_name = self.current_tok
+
+            res.register_advancement()
+            self.advanced()
+
+            return res.success(IncludeNode(library_name))
+
         return res.failure(
             Error.InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end.copy(),
@@ -498,7 +613,7 @@ class Parser:
         res = ParserResult()
         tok = self.current_tok
 
-        if tok.type in (Token.TCP_PLUS, Token.TCP_PLUS):
+        if tok.type in (Token.TCP_PLUS, Token.TCP_MINUS):
             res.register_advancement()
             self.advanced()
             factor = res.register(self.factor())
@@ -595,7 +710,6 @@ class Parser:
         statements.append(statement)
 
         more_statements = True
-
         while True:
             newline_count = 0
             while self.current_tok.type == Token.TTT_NEWLINE:
@@ -662,7 +776,10 @@ class Parser:
         self.advanced()
 
         if self.current_tok.type != Token.TTT_EOF:
-            element_nodes.append(res.register(self.statements()))
+            if NodeType == ClusterNode:
+                element_nodes.append(res.register(self.statements()))
+            else:
+                element_nodes.append(res.register(self.expr()))
         if res.error:
             return res.failure(
                     Error.InvalidSyntaxError(
@@ -673,7 +790,10 @@ class Parser:
             res.register_advancement()
             self.advanced()
 
-            element_nodes.append(res.register(self.statements()))
+            if NodeType == ClusterNode:
+                element_nodes.append(res.register(self.statements()))
+            else:
+                element_nodes.append(res.register(self.expr()))
             if res.error: return res
 
         self.tokens, self.tok_idx = original_tokens, original_idx
@@ -683,7 +803,7 @@ class Parser:
         if NodeType == StructureNode:
             if len(element_nodes) == 1:
                 interpreter = Interpreter.Interpreter()
-                result = interpreter.visit(element_nodes[0], self.context, None)
+                result = interpreter.visit(element_nodes[0], self.context, None, {'println': print, 'readline': input})
                 start = self.current_tok.pos_start
                 end = self.current_tok.pos_end
                 if isinstance(result.value, Interpreter.Number):
@@ -696,6 +816,8 @@ class Parser:
                     return res.success(ArrayNode(element_nodes, start, end))
                 if isinstance(result.value, Interpreter.Cluster):
                     return res.success(ClusterNode(element_nodes, start, end))
+        if NodeType == ClusterNode and not element_nodes:
+            return res.success(None)
         return res.success(NodeType(element_nodes, pos_start, self.current_tok.pos_end.copy()))
 
     def if_expr(self):
@@ -892,6 +1014,63 @@ class Parser:
 
         return res.success(ForNode(var_name, start_value, end_value, step_value, body, False))
 
+    def foriter_expr(self):
+        res = ParserResult()
+
+        if not self.current_tok.matches(Token.TTT_KEYWORD, "foriter"):
+            return res.failure(
+                Error.InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                    "expected 'foriter'"))
+
+        res.register_advancement()
+        self.advanced()
+
+        if self.current_tok.type != Token.TTT_IDENTIFIER:
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "lost variable"))
+
+        var_name = self.current_tok
+        res.register_advancement()
+        self.advanced()
+
+        if not self.current_tok.matches(Token.TTT_KEYWORD, "by"):
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "expected 'by'"))
+
+        res.register_advancement()
+        self.advanced()
+
+        if self.current_tok.type == Token.TTT_ARRAY:
+            iter_expr = res.register(self.expr())
+            if res.error: return res
+
+        elif self.current_tok.type == Token.TTT_IDENTIFIER:
+            iter_expr = res.register(res.success(VarAccessNode(self.current_tok)))
+            if res.error: return res
+
+            res.register_advancement()
+            self.advanced()
+
+        else:
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "expected 'array' or 'identifier'"))
+
+        if self.current_tok.type != Token.TTT_CLUSTER:
+            return res.failure(
+                Error.InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                    "expected '{'")
+            )
+
+        body = res.register(self._include_expr(ClusterNode, Token.TTP_SEMI))
+        if res.error: return res
+
+        return res.success(ForiterNode(var_name, iter_expr, body))
+
     def repeat_expr(self):
         res = ParserResult()
 
@@ -1077,6 +1256,31 @@ class Parser:
 
             res.register_advancement()
             self.advanced()
+
+            if self.current_tok.type == Token.TTT_ARRAY:
+                call_expr = res.register(res.success(CallFunctionNode(builder, arg_nodes)))
+                if res.error: return res
+                if self.current_tok.type == Token.TTT_ARRAY:
+                    pos_start = self.current_tok.pos_start
+                    index_list = []
+                    while self.current_tok.type == Token.TTT_ARRAY:
+                        original_tokens, original_idx = self.tokens, self.tok_idx
+                        self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                        res.register_advancement()
+                        self.advanced()
+                        index_list.append(res.register(self.expr()))
+                        if res.error: return res
+
+                        self.tokens, self.tok_idx = original_tokens, original_idx
+                        res.register_advancement()
+                        self.advanced()
+
+                    if len(index_list) == 0:
+                        return res.failure(
+                            Error.InvalidValueError(pos_start, self.current_tok.pos_end,
+                                                    "The subscripts index is Null"))
+                    return res.success(SubscriptsNode(call_expr, index_list))
             return res.success(CallFunctionNode(builder, arg_nodes))
         return res.success(builder)
 

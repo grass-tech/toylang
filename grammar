@@ -18,6 +18,8 @@ for <VarName> from [INT] to [INT] (step [INT] -> 1) {println(<VarName>)}
                |                         |                   |
              KEYWORD                CHOOSEABLE            CLUSTER
 
+foriter <VarName> by (<Var> | [Array]) {println(<VarName>)}
+
 repeat (meet | until) {println('Repeat Again')}
              ^
              |
@@ -39,6 +41,7 @@ function <FuncName> {println('enter function')}
 将值转换成字符串 -> string('<String>' | <Number> | <Expression*>)
 将值转换成布尔值 -> boolean('<String>' | <Number> | <Expression*>)
 将值转换成数组 -> array('<String>' | <Number> | <Expression*>)
+运行文件 -> run('<File>')
 
 
 # ADDITIONAL:
@@ -47,6 +50,10 @@ function <FuncName> {println('enter function')}
               ^
               |
           AS Character
+    ([Array] | [String])[<Number> | <Variable>] 切片 Subscripts
+                                   ^
+                                   |
+                                 Index
 
 低级Least: Number <- (PLUS | MINUS) -> Number
 中等Middle: Number <- (MUL | DIV) -> Number

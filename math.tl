@@ -5,7 +5,7 @@ var e = 2.718281828459045
 var tau = 6.283185307179586
 
 function pow(n, p) {
-    return int(n) ** int(p);
+    return n ** p;
 }
 
 function factorial(n) {
@@ -24,20 +24,15 @@ function abs(n) {
     }
 }
 
-function cos(n) {
-    var result = 0;
-    for x from 0 to 9 {
-        var term = (-1)**x * n**(2 * x) / math.factorial(2*x);
-        var result = result + term;
-    }
+function test() {
+    var result = [];
+    var result = result + pow(2, 2);
+    var result = result + pow(2, 3)
+    var result = result + factorial(5);
+    var result = result + factorial(3);
+    var result = result + abs(5);
+    var result = result + abs(-5)
+    println(['math.pow(2, 2)', 'math.pow(2, 3)', 'math.factorial(5)', 'math.abs(5)', 'math.pow(2, 3)', 'math.factorial(3)', 'math.abs(-5)']);
     return result;
 }
 
-function sin(n) {
-    var result = 0;
-    for x from 0 to 9 {
-        var term = (-1) ** x * n ** (2 * x + 1) / math.factorial(2 * x + 1);
-        var result = result + term;
-    }
-    return result;
-}

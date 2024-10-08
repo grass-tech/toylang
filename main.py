@@ -9,8 +9,5 @@ if __name__ == "__main__":
             if res is not None:
                 if isinstance(res, str):
                     print(res)
-                    continue
-                if len(res.elements) == 1:
-                    print(res.elements[0])
-                else:
-                    print(repr(res))
+                elif isinstance(res, list):
+                    print('\n'.join(res))
