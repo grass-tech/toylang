@@ -17,12 +17,12 @@ A python simple programming language，一个简单的python编程语言
 ## 相关说明 About
 
 - 令牌 tokens
-  - "Hello World" -> 字符串 (string)
-  - 114514 | 114514.191810 -> 数字 (number)
-  - () -> 结构体 (structure)
-  - [] -> 数组 (array)
-  - {} -> 代码簇 (cluster)
-  - () | [] | {} -> 包罗符 (including)
+    - "Hello World" -> 字符串 (string)
+    - 114514 | 114514.191810 -> 数字 (number)
+    - () -> 结构体 (structure)
+    - [] -> 数组 (array)
+    - {} -> 代码簇 (cluster)
+    - () | [] | {} -> 包罗符 (including)
 
 ## 语法 Grammar
 
@@ -33,25 +33,28 @@ A python simple programming language，一个简单的python编程语言
 |  elseif  | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |  否则如果  |
 |   else   | {\<CodesCluster>}                                                                              |   否则   |
 |   for    | \<Variable> from \<Expression*> to \<Expression*> (step \<Expression* -> 1>) {\<CodesCluster>} |  次数循环  |
-|  foriter | \<Variable> by (\<Variable> \| \[Array])                                                        |  迭代循环  |
+| foriter  | \<Variable> by (\<Variable> \| \[Array])                                                       |  迭代循环  |
 |  repeat  | (meet \| until)  \<Expression*> {\<CodesCluster>}                                              |  条件循环  |
 | function | \<FunctionName> {\<CodesCluster>}                                                              |  构建函数  |
 |  delete  | \<Variable>                                                                                    |  删除变量  |
 |  return  | \<Expression*>                                                                                 |  函数返回  |
-| break    | NULL                                                                                           |  跳出循环  |
-| continue | NULL                                                                                          | 跳出本次循环 |
-| include  | \<Library> \| \<Module>                                                                       | 导入库或模块 |
+|  break   | NULL                                                                                           |  跳出循环  |
+| continue | NULL                                                                                           | 跳出本次循环 |
+| include  | \<Library> \| \<Module>                                                                        | 导入库或模块 |
 
-|   内置函数   |           用法            |    用途    |
-|:--------:|:-----------------------:|:--------:|
-| println  |  <Expression*> -> Any   | 输出信息到控制台 |
-| readline | <Expression*> -> String |  读取用户输入  |
-|   int    |  <Expression*> -> INT   | 将值转换为整型  |
-|  string  |  <Expression*> -> Any   | 将值转换为字符串 |
-| boolean  |      <Condition*>       | 将值转换为布尔值 |
-|  array   | <Expression*> -> String | 将值转换为数组  |
-|  length  | <Expression*> -> String |   获取长度   |
-|   run    |    \<File> -> String     |   运行tl源文件  |
+|   内置函数    |           用法            |      用途      |
+|:---------:|:-----------------------:|:------------:|
+|  println  |  <Expression*> -> Any   |   输出信息到控制台   |
+| readline  | <Expression*> -> String |    读取用户输入    |
+|    int    |  <Expression*> -> INT   |   将值转换为整型    |
+|  string   |  <Expression*> -> Any   |   将值转换为字符串   |
+|  boolean  |      <Condition*>       |   将值转换为布尔值   |
+|   array   | <Expression*> -> String |   将值转换为数组    |
+|  length   | <Expression*> -> String |     获取长度     |
+|    run    |    \<File> -> String    |   运行tl源文件    |
+| timestamp |          Null           |  获取当前时间的时间戳  |
+| calllist  |    \<Object> -> Any     | 获取对象所有可调用的列表 |
+|   idle    |          Null           |    打开IDLE    |
 
 - Variable : 变量名 variable name
 - Condition : 条件表达式 condition expr
@@ -63,6 +66,12 @@ A python simple programming language，一个简单的python编程语言
 - (left | right) : 表示左边或右边的语法 left or right grammar
 - (.*?) -> (.*?) : 表示默认值 default value
 - | ： 表示"或"  'or'
+
+【\*】 IDLE new add `idle_call_funciton_table` variable, this need upload a dict, dict's key is called builtin function name, value is called execute function
+【\*】 IDLE 新增`idle_call_function_table`的变量，该变量需传入一个字典；字典的键为调用的内置函数的名字，值为所对应的调用的执行函数
+Default: {'println': print, 'readline': input}
+默认：{'println': print, 'readline': input}
+IDLE: {'println': self.println, 'readline': self.readline}
 
 ### 如何隔开代码簇 How to split cluster
 
@@ -122,7 +131,6 @@ true -> True
 [1, 2, 3, 4 ,5 ,6][0]
 ```
 
-
 ## 代码示例 Code Example
 
 - **奇偶数判断**
@@ -177,15 +185,15 @@ true -> True
 - **输出偶数**
 
   Shell
-  
+
   ```js
   > var minimum = int(readline('Type minimum number: '))
   > var maximum = int(readline('Type maximum number: '))
   > if minimum % 2 == 0 {for i from minimum to maximum step 2 {println(i)}} else {println(string(minimum) + " 非偶数，请输入一个偶数")}
   ```
-  
+
   File
-  
+
   ```js
   var minimum = int(readline('Type minimum number: '))
   var maximum = int(readline('Type maximum number: '))
@@ -201,14 +209,14 @@ true -> True
 - **斐波那契数列**
 
   Shell
-  
+
   ```js
   > function fib(n) {function fn(i) {if i < 2 {return 1} else {return fn(i - 2) + fn(i - 1)}};for x from 0 to n {println(fn(x))}}
   > fib(int(readline('type maximum fibonachi: ')))
   ```
-  
+
   File
-  
+
   ```js
   function fib(n) {
     function fn(i) {
@@ -240,9 +248,9 @@ true -> True
   }
   println('从' + string(end - counter) + '加到' + string(end) + '需要加' +   string(counter) + '次')
   ```
-  
+
   File
-  
+
   ```js
   var start = int(readline('Type start number: '))
   var end = int(readline('Type end number: '))
