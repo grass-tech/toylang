@@ -433,7 +433,8 @@ class Parser:
                 right_value = res.register(self.expr())
                 if res.error: return res
 
-                var_result = Interpreter.Interpreter().visit(VarAccessNode(tok), self.context, None)
+                var_result = Interpreter.Interpreter().visit(
+                    VarAccessNode(tok), self.context, None, {'println': print, 'readline': input})
                 if int(str(var_result.value.boolean())):
                     ternary_result = left_value
                 else:
@@ -441,7 +442,8 @@ class Parser:
 
                 # 处理节点
                 if "tok" not in dir(ternary_result):
-                    ternary_result = Interpreter.Interpreter().visit(ternary_result, self.context, None).value
+                    ternary_result = Interpreter.Interpreter().visit(
+                        ternary_result, self.context, None, {'println': print, 'readline': input}).value
                     error, tokens = Token.Lexer("<shell>", str(ternary_result.value)).make_tokens()
                     if error is not None: return error.as_string()
                     parser = Parser(tokens, "<shell>", self.context)
@@ -801,7 +803,7 @@ class Parser:
         if NodeType == StructureNode:
             if len(element_nodes) == 1:
                 interpreter = Interpreter.Interpreter()
-                result = interpreter.visit(element_nodes[0], self.context, None)
+                result = interpreter.visit(element_nodes[0], self.context, None, {'println': print, 'readline': input})
                 start = self.current_tok.pos_start
                 end = self.current_tok.pos_end
                 if isinstance(result.value, Interpreter.Number):
@@ -1276,7 +1278,8 @@ class Parser:
 
                     if len(index_list) == 0:
                         return res.failure(
-                            Error.InvalidValueError(pos_start, self.current_tok.pos_end, "The subscripts index is Null"))
+                            Error.InvalidValueError(pos_start, self.current_tok.pos_end,
+                                                    "The subscripts index is Null"))
                     return res.success(SubscriptsNode(call_expr, index_list))
             return res.success(CallFunctionNode(builder, arg_nodes))
         return res.success(builder)

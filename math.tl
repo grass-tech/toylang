@@ -35,3 +35,4 @@ function test() {
     println(['math.pow(2, 2)', 'math.pow(2, 3)', 'math.factorial(5)', 'math.abs(5)', 'math.pow(2, 3)', 'math.factorial(3)', 'math.abs(-5)']);
     return result;
 }
+

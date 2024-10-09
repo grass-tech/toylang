@@ -1,0 +1,24 @@
+{
+    "indent": 4,
+    "highlight": {
+        "keyword": "orange",
+        "builtin": "purple",
+        "number": "#00CDCD",
+        "string": "green",
+        "comment": "#CDC9C9",
+        "including": [
+            "#DAA520",
+            "green",
+            "#00CD00",
+            "#48D1CC",
+            "#1E90FF",
+            "#FF00FF"
+        ]
+    },
+    "view": {
+        "font": {
+            "name": "JetBrains Mono NL Medium",
+            "size": 10
+        }
+    }
+}
