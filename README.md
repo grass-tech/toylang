@@ -68,10 +68,15 @@ A python simple programming language，一个简单的python编程语言
 - | ： 表示"或"  'or'
 
 【\*】 IDLE new add `idle_call_funciton_table` variable, this need upload a dict, dict's key is called builtin function name, value is called execute function
+
 【\*】 IDLE 新增`idle_call_function_table`的变量，该变量需传入一个字典；字典的键为调用的内置函数的名字，值为所对应的调用的执行函数
+
 Default: {'println': print, 'readline': input}
+
 默认：{'println': print, 'readline': input}
+
 IDLE: {'println': self.println, 'readline': self.readline}
+
 
 ### 如何隔开代码簇 How to split cluster
 
