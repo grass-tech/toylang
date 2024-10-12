@@ -16,7 +16,6 @@ class RunUI(tk.Tk):
         __version__ = f"""ToyLang 1.1.5 Interpreter on {platform.system()} at {time.strftime('%H:%M:%S')} running
 [MISC for this]\n\n"""
         self.key_pressed = None
-        self.timer_id = None
         self.title("Run - ToyLang with IDLE : Official Version")
         if x + ox < self.winfo_screenwidth() and 0 > x - ox:
             fx = x + ox
@@ -38,12 +37,13 @@ class RunUI(tk.Tk):
         self.content_bar.insert(tk.END, __version__)
         self.content_bar.insert(tk.END, f'= {father.filename}\n\n')
 
+        self.colm_bar.tag_config("point", foreground="grey")
         self.content_bar.tag_config("output", foreground='blue')
         self.content_bar.tag_config("error", foreground='red')
 
         self.content_bar.pack(padx=5, fill=tk.BOTH, expand=True)
 
-        threading.Thread(target=self.run, args=(is_selection, father)).start()
+        threading.Thread(target=self.run, args=(is_selection, father), daemon=True).start()
 
     def println(self, rs):
         self.content_bar.insert(tk.END, rs, 'output')
@@ -51,25 +51,43 @@ class RunUI(tk.Tk):
         self.content_bar.update()
 
     def readline(self, info):
-        self.content_bar.unbind_all("<Return>")
+        def clear(text, text_widget):
+            text_widget.delete(0.0, tk.END)
+            text_widget.insert(0.0, text[:-1])
         self.colm_bar.delete(0.0, tk.END)
         self.colm_bar.configure(state=tk.NORMAL)
         self.colm_bar.insert(tk.END, '\n' * len(self.content_bar.get(0.0, tk.END).split("\n")[:-2]))
-        self.colm_bar.insert(tk.END, '>>>')
+        self.colm_bar.insert(tk.END, '>>>', "point")
+        self.colm_bar.yview_moveto(True)
+        self.colm_bar.update()
         self.colm_bar.configure(state=tk.DISABLED)
 
+        time.sleep(0.01)
+
         self.content_bar.insert(tk.END, info)
+        ot = self.content_bar.get(0.0, tk.END)
+
+        self.content_bar.yview_moveto(True)
+        self.content_bar.update()
         self.content_bar.bind("<Return>", lambda event: self.get_readline())
-        while self.key_pressed is None: pass
+        while self.key_pressed is None:
+            self.check_content_mistake(
+                ot, self.content_bar.get(0.0, tk.END), clear, ot, self.content_bar,
+                end_pos=len(ot))
         return self.key_pressed[len(info):]
 
     def get_readline(self):
-        cursor_position = self.content_bar.index(tk.INSERT)
-        line_number = int(cursor_position.split('.')[0])
-        start_of_line = f"{line_number}.0"
-        end_of_line = f"{line_number}.end"
-        current_line_content = self.content_bar.get(start_of_line, end_of_line)
+        last_line = self.content_bar.index("end-1c").split('.')[0]
+        total_lines = int(last_line)
+        current_line_content = self.content_bar.get(f"{total_lines - 1}.0", tk.END)
         self.key_pressed = current_line_content
+
+    @staticmethod
+    def check_content_mistake(text, compare_text, func, *args, start_pos=0, end_pos: int | None = None):
+        if end_pos is None:
+            end_pos = len(compare_text)
+        if text[:-1] != compare_text[start_pos:end_pos - 1]:
+            func(*args)
 
     def run(self, is_selection, father):
         idle = {
@@ -103,7 +121,3 @@ def runner(text, file, idle):
             return [None, '\n'.join(res)]
     else:
         return [None, '']
-
-
-if __name__ == '__main__':
-    RunUI().mainloop()

@@ -751,10 +751,6 @@ class Parser:
             self.advanced()
             return res.success(BreakNode(pos_start, self.current_tok.pos_end.copy()))
 
-        while self.current_tok.type == Token.TTT_NEWLINE:
-            res.register_advancement()
-            self.advanced()
-
         expr = res.register(self.expr())
         if res.error:
             return res.failure(Error.InvalidSyntaxError(
@@ -858,14 +854,13 @@ class Parser:
         statements = res.register(self.statements())
         if res.error: return res
         cases.append((condition, statements, True))
-
         if self.current_tok.type == Token.TTT_EOF:
             self.tokens, self.tok_idx = original_tokens, original_idx
 
             res.register_advancement()
             self.advanced()
 
-            if self.current_tok.type != Token.TTT_EOF:
+            if self.current_tok.type not in (Token.TTT_EOF, Token.TTT_NEWLINE):
                 all_cases = res.register(self.if_expr_b_or_c())
                 if res.error: return res
                 new_cases, else_case = all_cases
@@ -875,7 +870,7 @@ class Parser:
         else:
             expr = res.register(self.statement())
             if res.error: return res
-            cases.append((condition, expr, False))
+            cases.append((condition, expr, True))
 
             all_cases = res.register(self.if_expr_b_or_c())
             if res.error: return res
@@ -923,7 +918,6 @@ class Parser:
     def if_expr_b_or_c(self):
         res = ParserResult()
         cases, else_case = [], None
-
         if self.current_tok.matches(Token.TTT_KEYWORD, "elseif"):
             all_cases = res.register(self.if_expr_b())
             if res.error: return res

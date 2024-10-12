@@ -1,9 +1,9 @@
+import threading
 import tkinter as tk
 import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 import re
-import os
 import json
 
 import sys
@@ -16,7 +16,7 @@ import idle.run as runner
 
 with open(f"{os.getcwd()}/idle/settings.json", "r", encoding="utf-8") as f:
     settings = json.load(f)
-run_ui = None
+run_ui = []
 
 
 class IdleFunction:
@@ -83,27 +83,41 @@ class IdleFunction:
 
     def run(self):
         global run_ui
-        if run_ui is not None:
-            try:
-                run_ui.destroy()
-            except:
-                pass
-        run_ui = runner.RunUI(
+        for ru in run_ui:
+            if ru is not None:
+                try:
+                    ru.destroy()
+                    run_ui.pop(run_ui.index(ru))
+                except (AttributeError, RuntimeError):
+                    try:
+                        run_ui.pop(run_ui.index(ru))
+                    except ValueError:
+                        pass
+        run_ui.append(runner.RunUI(
             self.idle,
-            self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width())
-        run_ui.mainloop()
+            self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width()))
+        run_ui[-1].mainloop()
 
     def run_selection(self):
         global run_ui
-        if run_ui is not None:
-            try:
-                run_ui.destroy()
-            except:
-                pass
-        run_ui = runner.RunUI(
+        for ru in run_ui:
+            if ru is not None:
+                try:
+                    ru.destroy()
+                    run_ui.remove(ru)
+                except (AttributeError, RuntimeError):
+                    try:
+                        run_ui.pop(run_ui.index(ru))
+                    except ValueError:
+                        pass
+        run_ui.append(runner.RunUI(
             self.idle,
-            self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width(), True)
-        run_ui.mainloop()
+            self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width(), True))
+        run_ui[-1].mainloop()
+
+
+def thread_run(func, *args):
+    threading.Thread(target=func, args=args).start()
 
 
 class Idle(tk.Tk):
@@ -141,9 +155,11 @@ class Idle(tk.Tk):
 
         # Run Menu Bar
         self.run_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.run_menu.add_command(label="Run Whole", accelerator="F5", command=IdleFunction(self).run)
+        self.run_menu.add_command(label="Run Whole", accelerator="F5",
+                                  command=lambda: thread_run(IdleFunction(self).run))
         self.run_menu.add_command(
-            label="Run Selection", accelerator="Alt+F5", command=IdleFunction(self).run_selection)
+            label="Run Selection", accelerator="Alt+F5",
+            command=lambda: thread_run(IdleFunction(self).run_selection))
 
         self.menu_bar.add_cascade(label="Run", menu=self.run_menu)
         self['menu'] = self.menu_bar
@@ -177,8 +193,8 @@ class Idle(tk.Tk):
         self.content_bar.tag_config('string', foreground=settings['highlight']['string'])
         self.content_bar.tag_config('comment', foreground=settings['highlight']['comment'])
 
-        self.bind("<F5>", lambda event: IdleFunction(self).run())
-        self.bind("<Alt-F5>", lambda event: IdleFunction(self).run_selection())
+        self.bind("<F5>", lambda event: thread_run(IdleFunction(self).run,))
+        self.bind("<Alt-F5>", lambda event: thread_run(IdleFunction(self).run_selection))
         self.bind("<Control-n>", lambda event: IdleFunction(self).create())
         self.bind("<Control-N>", lambda event: IdleFunction(self).new_file())
         self.bind("<Control-o>", lambda event: IdleFunction(self).open_file())

@@ -1437,6 +1437,9 @@ def execute(fn, syntax, father=None, return_result=True, ide_call_function_table
     error, tokens = Token.Lexer(fn, syntax).make_tokens()
     if error is not None: return error.as_string()
     if tokens[0].type == Token.TTT_EOF: return None
+    ready = list(map(str, tokens)).count(Token.TTT_NEWLINE)
+    if ready == len(tokens) - 1 and ready != 0 and tokens[-1].type == Token.TTT_EOF:
+        return None
 
     interpreter = Interpreter()
     context = Context("<program>")
@@ -1454,10 +1457,11 @@ def execute(fn, syntax, father=None, return_result=True, ide_call_function_table
         for element in result.value.elements:
             if isinstance(element, Null):
                 continue
-            if 'value' in dir(element): fan_res.append(element.value)
-            elif 'name' in dir(element): fan_res.append(repr(element))
-            else: fan_res.append(repr(element.elements))
-        if return_result:
+            if 'value' in dir(element): fan_res.append(str(element.value))
+            elif 'name' in dir(element): fan_res.append(str(element))
+            elif 'element' in dir(element): fan_res.append(str(element.elements))
+            else: fan_res.append(str(element))
+        if return_result and len(fan_res) > 0:
             return fan_res
         else:
             return None
