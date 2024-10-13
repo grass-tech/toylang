@@ -1,7 +1,7 @@
 /* Multiple Function Package File 多函数包文件 */
 
 /* fibonacci with factorial 递归斐波那契数列 */
-function factorial_fib(n) {
+function factorial_fib(n=10) {
     var result = [];
     function factor(i) {
         if i < 2 {
@@ -18,7 +18,7 @@ function factorial_fib(n) {
 }
 
 /* fibonacci with Repeat 循环斐波那契数列 */
-function repeat_fib(n) {
+function repeat_fib(n=20) {
     var result = [];
     for i from 0 to n {
         if i <= 1 {
@@ -50,3 +50,4 @@ function timer(func) {
     func();
     return timestamp() - starttime;
 }
+

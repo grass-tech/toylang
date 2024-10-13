@@ -187,9 +187,10 @@ class ContinueNode:
 
 # 函数节点
 class FunctionDefinedNode:
-    def __init__(self, var_name_tok, arg_name_tokens, body_node, should_auto_return):
+    def __init__(self, var_name_tok, arg_name_tokens, default_args_node, body_node, should_auto_return):
         self.var_name_tok = var_name_tok
         self.arg_name_toks = arg_name_tokens
+        self.default_args_node = default_args_node
         self.body_node = body_node
         self.should_auto_return = should_auto_return
 
@@ -1179,10 +1180,21 @@ class Parser:
         res.register_advancement()
         self.advanced()
 
+        default_args_node = []
         if self.current_tok.type == Token.TTT_IDENTIFIER:
             arg_name_toks.append(self.current_tok)
             res.register_advancement()
             self.advanced()
+
+            if self.current_tok.type == Token.TLP_EQUAL:
+                while self.current_tok.type == Token.TLP_EQUAL:
+                    res.register_advancement()
+                    self.advanced()
+
+                    default_args_node.append(res.register(self.expr()))
+                    if res.error: return res
+            else:
+                default_args_node.append(None)
 
             while self.current_tok.type == Token.TTP_COMMA:
                 res.register_advancement()
@@ -1194,8 +1206,19 @@ class Parser:
                     ))
 
                 arg_name_toks.append(self.current_tok)
+
                 res.register_advancement()
                 self.advanced()
+
+                if self.current_tok.type == Token.TLP_EQUAL:
+                    while self.current_tok.type == Token.TLP_EQUAL:
+                        res.register_advancement()
+                        self.advanced()
+
+                        default_args_node.append(res.register(self.expr()))
+                        if res.error: return res
+                else:
+                    default_args_node.append(None)
 
         self.tokens, self.tok_idx = original_tokens, original_idx
 
@@ -1215,6 +1238,7 @@ class Parser:
         return res.success(FunctionDefinedNode(
             var_name_tok,
             arg_name_toks,
+            default_args_node,
             node_to_return,
             True,
         ))

@@ -607,17 +607,25 @@ class BaseFunction(Value):
 
         return new_context
 
-    def check_args(self, arg_names, args):
+    def check_args(self, arg_names, default_args_value, args):
         res = Parser.RTResult()
 
-        if len(args) > len(arg_names):
+        if len(arg_names) != len(default_args_value):
+            return res.failure(
+                Error.RunningTimeError(
+                    self.pos_start, self.pos_end,
+                    f"The arguments' length is not match, "
+                    f"(upload {len(arg_names)}, got {len(default_args_value)})"
+                )
+            )
+        if len(args) > len(default_args_value):
             return res.failure(
                 Error.InvalidValueError(
                     self.pos_start, self.pos_end,
                     f"{len(args) - len(arg_names)} too many args passed to {self.name}"
                 )
             )
-        if len(args) < len(arg_names):
+        if len(args) < default_args_value.count(None):
             return res.failure(
                 Error.InvalidSyntaxError(
                     self.pos_start, self.pos_end,
@@ -628,28 +636,35 @@ class BaseFunction(Value):
         return res.success(Null())
 
     @staticmethod
-    def populate_args(arg_names, args, exec_ctf):
+    def populate_args(arg_names, default_args_value, args, exec_ctf):
+        for i in range(len(arg_names)):
+            if default_args_value[i] is not None:
+                arg_name = arg_names[i]
+                arg_value = default_args_value[i]
+                arg_value.set_context(exec_ctf)
+                exec_ctf.symbol_table.set(arg_name, arg_value)
         for i in range(len(args)):
             arg_name = arg_names[i]
             arg_value = args[i]
             arg_value.set_context(exec_ctf)
             exec_ctf.symbol_table.set(arg_name, arg_value)
 
-    def check_and_populate_args(self, arg_names, args, exec_ctf):
+    def check_and_populate_args(self, arg_names, default_args_value, args, exec_ctf):
         res = Parser.RTResult()
 
-        res.register(self.check_args(arg_names, args))
+        res.register(self.check_args(arg_names, default_args_value, args))
         if res.should_return(): return res
-        self.populate_args(arg_names, args, exec_ctf)
+        self.populate_args(arg_names, default_args_value, args, exec_ctf)
         return res.success(Null())
 
 
 # 函数
 class Function(BaseFunction):
-    def __init__(self, name, body_node, arg_names, should_return_null, father):
+    def __init__(self, name, body_node, arg_names, default_args_value, should_return_null, father):
         super().__init__(name, father)
         self.body_node = body_node
         self.arg_names = arg_names
+        self.default_args_value = default_args_value
         self.should_return_null = should_return_null
         self.ide_call_function_table = None
 
@@ -658,7 +673,7 @@ class Function(BaseFunction):
         interpreter = Interpreter()
 
         exec_ctf = self.generate_new_context()
-        res.register(self.check_and_populate_args(self.arg_names, args, exec_ctf))
+        res.register(self.check_and_populate_args(self.arg_names, self.default_args_value, args, exec_ctf))
         if res.should_return(): return res
 
         value = res.register(interpreter.visit(self.body_node, exec_ctf, None, self.ide_call_function_table))
@@ -668,7 +683,8 @@ class Function(BaseFunction):
         return res.success(return_value)
 
     def copy(self):
-        copy = Function(self.name, self.body_node, self.arg_names, self.should_return_null, self.father)
+        copy = Function(self.name, self.body_node, self.arg_names,
+                        self.default_args_value, self.should_return_null, self.father)
         copy.set_context(self.context)
         copy.set_pos(self.pos_start, self.pos_end)
         return copy
@@ -716,7 +732,7 @@ class BuiltinFunction(BaseFunction):
         method_name = f"execute_{self.name}"
         method = getattr(self, method_name, self.no_visit_method)
 
-        res.register(self.check_and_populate_args(method.arg_names, args, exec_cft))
+        res.register(self.check_and_populate_args(method.arg_names, method.default_args_value, args, exec_cft))
         if res.should_return(): return res
 
         return_value = res.register(method(exec_cft))
@@ -728,20 +744,18 @@ class BuiltinFunction(BaseFunction):
         raise Exception(f"No execute_{self.name} method defined")
 
     def execute_println(self, exec_cft):
-        end_pos = '\n'
-        if self.ide_call_function_table['println'] == print:
-            end_pos = ''
-        self.ide_call_function_table['println'](str(exec_cft.symbol_table.get('value')) + end_pos)
+        end_pos = str(exec_cft.symbol_table.get("end"))
+        self.ide_call_function_table['println'](str(exec_cft.symbol_table.get('value')), end=end_pos)
         return Parser.RTResult().success(Null())
-
-    execute_println.arg_names = ["value"]
+    execute_println.default_args_value = [String(""), String("\n")]
+    execute_println.arg_names = ["value", "end"]
 
     def execute_readline(self, exec_cft):
         result = self.ide_call_function_table['readline'](str(exec_cft.symbol_table.get('value')))
         if result is None:
             raise ValueError("readline()'s callable function should return a value")
         return Parser.RTResult().success(String(str(result)))
-
+    execute_readline.default_args_value = [String("")]
     execute_readline.arg_names = ["value"]
 
     def execute_len(self, exec_cft):
@@ -751,6 +765,7 @@ class BuiltinFunction(BaseFunction):
                 f"Can't get length of type '{type(exec_cft.symbol_table.get('value')).__name__}'"
             ))
         return Parser.RTResult().success(Number(int(exec_cft.symbol_table.get('value').length())))
+    execute_len.default_args_value = [None]
     execute_len.arg_names = ["value"]
 
     def execute_run(self, exec_cft):
@@ -789,6 +804,7 @@ class BuiltinFunction(BaseFunction):
             )
 
         return Parser.RTResult().success(Null())
+    execute_run.default_args_value = [None]
     execute_run.arg_names = ["filename"]
 
     def execute_int(self, exec_cft):
@@ -800,10 +816,12 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for int() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
+    execute_int.default_args_value = [None]
     execute_int.arg_names = ["value"]
 
     def execute_str(self, exec_cft):
         return Parser.RTResult().success(String(str(exec_cft.symbol_table.get('value'))))
+    execute_str.default_args_value = [None]
     execute_str.arg_names = ["value"]
 
     def execute_float(self, exec_cft):
@@ -815,10 +833,12 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for float() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
+    execute_float.default_args_value = [None]
     execute_float.arg_names = ["value"]
 
     def execute_bool(self, exec_cft):
         return Parser.RTResult().success(exec_cft.symbol_table.get("value").boolean())
+    execute_bool.default_args_value = [None]
     execute_bool.arg_names = ["value"]
 
     def execute_array(self, exec_cft):
@@ -831,6 +851,7 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for array() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
+    execute_array.default_args_value = [None]
     execute_array.arg_names = ["value"]
 
     def execute_calllist(self, exec_cft):
@@ -856,15 +877,18 @@ class BuiltinFunction(BaseFunction):
             )
         return Parser.RTResult().success(
             Array(list(exec_cft.symbol_table.symbols[obj].keys())))
+    execute_calllist.default_args_value = [None]
     execute_calllist.arg_names = ["object"]
 
     def execute_timestamp(self, exec_cft):
         return Parser.RTResult().success(Number(__import__("time").time()))
+    execute_timestamp.default_args_value = []
     execute_timestamp.arg_names = []
 
     def execute_idle(self, exec_cft):
         Idle.Idle(Token.SYNTAX, builtin).mainloop()
         return Parser.RTResult().success(Null())
+    execute_idle.default_args_value = []
     execute_idle.arg_names = []
 
     def copy(self):
@@ -1282,15 +1306,22 @@ class Interpreter:
     def visit_ContinueNode(node, context, father, ide_call_function_table):
         return Parser.RTResult().success_continue()
 
-    @staticmethod
-    def visit_FunctionDefinedNode(node, context, father, ide_call_function_table):
+    def visit_FunctionDefinedNode(self, node, context, father, ide_call_function_table):
         res = Parser.RTResult()
+        default_arg_value = []
 
         func_name = node.var_name_tok.value if node.var_name_tok else None
         body_node = node.body_node
         arg_names = [arg_name.value for arg_name in node.arg_name_toks]
+        for default_arg_node in node.default_args_node:
+            if default_arg_node is None:
+                default_arg_value.append(default_arg_node)
+                continue
+            default_arg_value.append(res.register(
+                self.visit(default_arg_node, context, father, ide_call_function_table)))
+            if res.should_return(): return res
         func_value = Function(
-            func_name, body_node, arg_names, node.should_auto_return, father
+            func_name, body_node, arg_names, default_arg_value, node.should_auto_return, father
         ).set_context(context).set_pos(node.pos_start, node.pos_end)
 
         if node.var_name_tok:

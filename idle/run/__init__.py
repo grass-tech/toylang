@@ -45,8 +45,8 @@ class RunUI(tk.Tk):
 
         threading.Thread(target=self.run, args=(is_selection, father), daemon=True).start()
 
-    def println(self, rs):
-        self.content_bar.insert(tk.END, rs, 'output')
+    def println(self, rs, end):
+        self.content_bar.insert(tk.END, str(rs) + str(end), 'output')
         self.content_bar.yview_moveto(True)
         self.content_bar.update()
 
