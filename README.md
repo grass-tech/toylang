@@ -136,6 +136,25 @@ true -> True
 [1, 2, 3, 4 ,5 ,6][0]
 ```
 
+### 可选参数 Optional parameter
+
+用法
+
+```txt
+function <FunctionName>(<Variable> = <Expression>) {<Expression>}
+                                   ^
+                                   |
+                            参等于Param equal
+```
+
+示例
+
+```js
+function test(a, b=1) {return a + b;}
+test(1);
+```
+
+
 ## 代码示例 Code Example
 
 - **奇偶数判断**
