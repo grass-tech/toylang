@@ -86,7 +86,7 @@ IDLE: {'println': self.println, 'readline': self.readline}
 
 ### 三元表达式 Ternary Expression
 
-用法
+用法 Useage
 
 ```js
 <Variable> ? <Expression> : <Expression>
@@ -95,7 +95,7 @@ IDLE: {'println': self.println, 'readline': self.readline}
    变量名 触发符 真表达式   真|假  假表达式
 ```
 
-示例
+示例 Example
 
 ```js
 true ? "值为真" : "值为假"
@@ -103,7 +103,7 @@ true ? "值为真" : "值为假"
 
 ### 变量别名 Variable Alias
 
-用法
+用法 Useage
 
 ```txt
 <Variable> -> <AnotherVaraibleName>
@@ -112,7 +112,7 @@ true ? "值为真" : "值为假"
 被别名的变量  符号     别名变量
 ```
 
-示例
+示例 Example
 
 ```txt
 true -> True
@@ -120,7 +120,7 @@ true -> True
 
 ### 切片 Subscripts
 
-用法
+用法 Useage
 
 ```txt
 (<Variable> | [Array] | [String])[<Variable> | [Number]]
@@ -129,7 +129,7 @@ true -> True
            被切片的                      索引
 ```
 
-示例
+示例 Example
 
 ```txt
 [1, 2, 3, 4, 5, 6][1]
@@ -138,7 +138,7 @@ true -> True
 
 ### 可选参数 Optional parameter
 
-用法
+用法 Useage
 
 ```txt
 function <FunctionName>(<Variable> = <Expression>) {<Expression>}
@@ -147,11 +147,38 @@ function <FunctionName>(<Variable> = <Expression>) {<Expression>}
                             参等于Param equal
 ```
 
-示例
+示例 Example
 
 ```js
 function test(a, b=1) {return a + b;}
 test(1);
+```
+
+### 隐藏变量
+
+> 隐藏变量是指无法被正常通过`Father.Child.Variable`的方式访问的变量（外部仍然可以通过`$`访问）
+
+> Hiden variable means cannot normally access by `Father.Child.Varaible` (Outdoor still can access by `$`)
+
+用法 Useage
+
+```txt
+var _<Variable>_ = <Expression*>
+ ^       ^
+ |       |
+变量 开头末尾有"_"的变量
+```
+
+示例 Example
+
+```js
+var _test_ = '123'
+```
+
+调用 Call
+
+```
+$_test_
 ```
 
 
