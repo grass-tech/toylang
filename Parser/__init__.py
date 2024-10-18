@@ -387,6 +387,22 @@ class Parser:
             self.advanced()
             return res.success(NumberNode(tok))
 
+        elif tok.type == Token.TTT_BIN:
+            res.register_advancement()
+            self.advanced()
+            ctok = Token.Token(Token.TTT_INT, int(tok.value, 2), tok.pos_start, tok.pos_end)
+            return res.success(NumberNode(ctok))
+        elif tok.type == Token.TTT_OCT:
+            res.register_advancement()
+            self.advanced()
+            ctok = Token.Token(Token.TTT_INT, int(tok.value, 8), tok.pos_start, tok.pos_end)
+            return res.success(NumberNode(ctok))
+        elif tok.type == Token.TTT_HEX:
+            res.register_advancement()
+            self.advanced()
+            ctok = Token.Token(Token.TTT_INT, int(tok.value, 16), tok.pos_start, tok.pos_end)
+            return res.success(NumberNode(ctok))
+
         # 对字符串的判断
         elif tok.type == Token.TTT_STR:
             res.register_advancement()
@@ -411,6 +427,32 @@ class Parser:
                         Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
                 return res.success(SubscriptsNode(StringNode(tok), index_list))
             return res.success(StringNode(tok))
+
+        elif tok.type == Token.TTT_GETTER:
+            res.register_advancement()
+            self.advanced()
+            if self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(tok.pos_start, tok.pos_end, "The subscripts index is Null"))
+                tok = Token.Token(Token.TTT_IDENTIFIER, f'${tok.value}$', tok.pos_start, tok.pos_end)
+                return res.success(SubscriptsNode(VarAccessNode(tok), index_list))
+            tok = Token.Token(Token.TTT_IDENTIFIER, f'${tok.value}$', tok.pos_start, tok.pos_end)
+            return res.success(VarAccessNode(tok))
 
         # 对标识符的判断
         elif tok.type == Token.TTT_IDENTIFIER:
@@ -457,11 +499,14 @@ class Parser:
                 elif ternary_result.tok.type == Token.TTT_STR:
                     return res.success(StringNode(ternary_result.tok))
                 elif ternary_result.tok.type == Token.TTT_STRUCTURE:
-                    return res.success(StructureNode(ternary_result.tok))
+                    return res.success(StructureNode(ternary_result.tok,
+                                                     ternary_result.tok.pos_start, ternary_result.tok.pos_end))
                 elif ternary_result.tok.type == Token.TTT_ARRAY:
-                    return res.success(ArrayNode(ternary_result.tok))
+                    return res.success(ArrayNode(ternary_result.tok,
+                                                 ternary_result.tok.pos_start, ternary_result.tok.pos_end))
                 elif ternary_result.tok.type == Token.TTT_CLUSTER:
-                    return res.success(ClusterNode(ternary_result.tok))
+                    return res.success(ClusterNode(ternary_result.tok,
+                                                   ternary_result.tok.pos_start, ternary_result.tok.pos_end))
                 else:
                     return res.failure(Error.InvalidTypeError(
                         ternary_result.tok.pos_start, ternary_result.tok.pos_end,
@@ -472,7 +517,6 @@ class Parser:
                 self.advanced()
 
                 identifier = self.current_tok
-                if res.error: return res
 
                 res.register_advancement()
                 self.advanced()
@@ -632,6 +676,12 @@ class Parser:
     def arith_expr(self):
         return self.bin_op(self.term, (Token.TCP_PLUS, Token.TCP_MINUS))
 
+    def movement_expr(self):
+        return self.bin_op(self.arith_expr, (
+            Token.TLP_DOUBLE_EQUAL, Token.TLP_NOT_EQUAL,
+            Token.TLP_LESS, Token.TLP_LESS_EQUAL,
+            Token.TLP_GREATER, Token.TLP_GREATER_EQUAL))
+
     def comp_expr(self):
         res = ParserResult()
         if self.current_tok.matches(Token.TTT_KEYWORD, "not"):
@@ -644,10 +694,11 @@ class Parser:
             return res.success(UnaryOperationNode(op_tok, node))
 
         node = res.register(self.bin_op(
-            self.arith_expr,
-            (Token.TLP_DOUBLE_EQUAL, Token.TLP_NOT_EQUAL,
-                Token.TLP_LESS, Token.TLP_LESS_EQUAL,
-                Token.TLP_GREATER, Token.TLP_GREATER_EQUAL)))
+            self.movement_expr, (
+                Token.TLP_XOR,
+                Token.TLP_AND_MOVEMENT, Token.TLP_OR_MOVEMENT,
+                Token.TLP_LEFT_MOVEMENT, Token.TLP_RIGHT_MOVEMENT,
+            )))
         if res.error:
             return res.failure(Error.InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,

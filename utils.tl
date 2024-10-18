@@ -51,3 +51,7 @@ function timer(func) {
     return timestamp() - starttime;
 }
 
+function test() {
+    println($_moder_);
+}
+

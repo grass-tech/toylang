@@ -51,12 +51,17 @@ class RunUI(tk.Tk):
         self.content_bar.update()
 
     def readline(self, info):
+        self.key_pressed = None
+
         def clear(text, text_widget):
             text_widget.delete(0.0, tk.END)
             text_widget.insert(0.0, text[:-1])
         self.colm_bar.delete(0.0, tk.END)
         self.colm_bar.configure(state=tk.NORMAL)
-        self.colm_bar.insert(tk.END, '\n' * len(self.content_bar.get(0.0, tk.END).split("\n")[:-2]))
+        self.colm_bar.delete(0.0, tk.END)
+        last_line = self.content_bar.index("end-1c").split('.')[0]
+        total_lines = int(last_line)
+        self.colm_bar.insert(tk.END, '\n' * (total_lines - 1))
         self.colm_bar.insert(tk.END, '>>>', "point")
         self.colm_bar.yview_moveto(True)
         self.colm_bar.update()
@@ -79,7 +84,7 @@ class RunUI(tk.Tk):
     def get_readline(self):
         last_line = self.content_bar.index("end-1c").split('.')[0]
         total_lines = int(last_line)
-        current_line_content = self.content_bar.get(f"{total_lines - 1}.0", tk.END)
+        current_line_content = self.content_bar.get(f"{total_lines}.0", tk.END)
         self.key_pressed = current_line_content
 
     @staticmethod

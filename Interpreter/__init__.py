@@ -3,9 +3,10 @@ import ast
 
 import sys
 import os
-import decimal
 from typing import Any
+import sys
 
+sys.set_int_max_str_digits(0)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Token
 import Parser
@@ -73,6 +74,21 @@ class Value:
     def notted(self):
         return None, self.illegal_operation()
 
+    def xor(self, other):
+        return None, self.illegal_operation()
+
+    def or_move(self, other):
+        return None, self.illegal_operation()
+
+    def and_move(self, other):
+        return None, self.illegal_operation()
+
+    def left_move(self, other):
+        return None, self.illegal_operation()
+
+    def right_move(self, other):
+        return None, self.illegal_operation()
+
     def execute(self, args):
         return Parser.RTResult().failure(self.illegal_operation())
 
@@ -117,7 +133,7 @@ class Null(Value):
 class Number(Value):
     def __init__(self, value):
         super().__init__()
-        if '.' in str(value):
+        if not str(value).isdigit():
             self.value = float(str(value))
         else:
             self.value = int(str(value))
@@ -128,154 +144,157 @@ class Number(Value):
         copy.set_context(self.context)
         return copy
 
-    @staticmethod
-    def get_num(left, right=None):
-        if '.' not in str(left):
-            lv = int(str(left))
-        else:
-            lv = float(str(left))
-        if right is not None:
-            if '.' not in str(right):
-                rv = int(str(right))
-            else:
-                rv = float(str(right))
-        else:
-            return lv
-        return lv, rv
-
     def added_to(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(left + right), None
+            return Number(self.value + other.value), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'+' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def subbed_by(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(left - right), None
+            return Number(self.value - other.value), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'-' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def multi_by(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(left * right), None
+            return Number(self.value * other.value), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'*' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def dived_by(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            if right == 0:
+            if other.value == 0:
                 return (None, Error.InvalidValueError(
                     self.pos_start, self.pos_end,
                     "division by zero, division not supported by zero"))
-            return Number(left / right), None
+            return Number(self.value / other.value), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'/' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def intdived_by(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            if right == 0:
+            if other.value == 0:
                 return (None, Error.InvalidValueError(
                     self.pos_start, self.pos_end,
                     "integer division by zero, integer division not supported by zero"))
-            return Number(left // right), None
+            return Number(self.value // other.value), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'//' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def powered_by(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(decimal.Decimal(str(left)) ** right), None
+            return Number(self.value ** other.value), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'**' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def modded_by(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            if right == 0:
+            if other.value == 0:
                 return (None, Error.InvalidValueError(
                     self.pos_start, self.pos_end,
                     "Modulo by zero, modulo not supported by zero"))
-            return Number(left % right), None
+            return Number(self.value % other.value), None
 
     def is_equals(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
+            return Number(int(self.value == other.value)), None
         else:
             return Number(0), None
-        return Number(int(left == right)), None
 
     def is_greater(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(int(left > right)), None
+            return Number(int(self.value > other.value)), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'>' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def is_greater_equals(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(int(left >= right)), None
+            return Number(int(self.value >= other.value)), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'>=' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def is_less(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(int(left < right)), None
+            return Number(int(self.value < other.value)), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'<' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def is_less_equals(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(int(left <= right)), None
+            return Number(int(self.value <= other.value)), None
         return None, Error.InvalidSyntaxError(
             self.pos_start, other.pos_end,
             f"'<=' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def is_not_equals(self, other):
         if isinstance(other, Number):
-            left, right = self.get_num(self.value, other.value)
-            return Number(int(left != right)), None
+            return Number(int(self.value != other.value)), None
         return None, Error.InvalidValueError(
             self.pos_start, other.pos_end,
             f"'!=' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
+    def xor(self, other):
+        if isinstance(other, Number):
+            return Number(self.value ^ other.value), None
+        else:
+            return None, Error.InvalidValueError(
+                self.pos_start, other.pos_end,
+                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
+    def or_move(self, other):
+        if isinstance(other, Number):
+            return Number(self.value | other.value), None
+        else:
+            return None, Error.InvalidValueError(
+                self.pos_start, other.pos_end,
+                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
+    def and_move(self, other):
+        if isinstance(other, Number):
+            return Number(self.value & other.value), None
+        else:
+            return None, Error.InvalidValueError(
+                self.pos_start, other.pos_end,
+                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
+    def left_move(self, other):
+        if isinstance(other, Number):
+            return Number(self.value << other.value), None
+        else:
+            return None, Error.InvalidValueError(
+                self.pos_start, other.pos_end,
+                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
+    def right_move(self, other):
+        if isinstance(other, Number):
+            return Number(self.value >> other.value), None
+        else:
+            return None, Error.InvalidValueError(
+                self.pos_start, other.pos_end,
+                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
     def notted(self):
-        main = self.get_num(self.value)
-        return Number(0 if bool(main) else 1), None
+        return Number(0 if bool(self.value) else 1), None
 
     def anded_by(self, other):
-        if isinstance(other.value, Number):
-            left, right = self.get_num(self.value, other.value)
-        else:
-            left, right = self.get_num(self.value), other.value
-        if not right:
+        if not other.value:
             return Number(0), None
-        return Number(1 if int(left and right) else 0), None
+        return Number(1 if int(self.value and other.value) else 0), None
 
     def ored_by(self, other):
-        if isinstance(other.value, Number):
-            left, right = self.get_num(self.value, other.value)
-        else:
-            left, right = self.get_num(self.value), other.value
-        if not right:
+        if not other.value:
             return Number(0), None
-        return Number(1 if int(left or right) else 0), None
+        return Number(1 if int(self.value or other.value) else 0), None
 
     def is_true(self):
         return self.value != 0
@@ -594,6 +613,7 @@ class BaseFunction(Value):
         new_context.symbol_table.set("null", null)
         new_context.symbol_table.set("true", true)
         new_context.symbol_table.set("false", false)
+        new_context.symbol_table.set_spec("_moder_", String(self.name))
         for var_name, value in self.context.symbol_table.symbols.items():
             if isinstance(value, Function) or isinstance(value, BuiltinFunction):
                 new_context.symbol_table.set(var_name, value)
@@ -691,7 +711,7 @@ class Function(BaseFunction):
 
     def is_equals(self, other):
         if isinstance(other, Function):
-            return Number(1), None
+            return Number(int(self.name == other.name)), None
         else:
             return Number(0), None
 
@@ -968,6 +988,25 @@ class SymbolTable:
         else:
             raise Exception("father should be list")
 
+    def set_spec(self, name, value, father=None):
+        def father_dict(d, iter_list, name, value):
+            current_dict = d
+
+            for i, key in enumerate(iter_list):
+                if key not in current_dict:
+                    current_dict[key] = {}
+                current_dict = current_dict[key]
+
+            current_dict[f"${name}$"] = value
+
+            return d
+        if father is None:
+            self.symbols[f"${name}$"] = value
+        elif isinstance(father, list):
+            self.symbols = father_dict(self.symbols, father, name, value)
+        else:
+            raise Exception("father should be list")
+
     def remove(self, name):
         del self.symbols[name]
 
@@ -1030,7 +1069,10 @@ class Interpreter:
             if res.should_return(): return res
 
         if len(structure) == 1 and isinstance(structure[0], Number):
-            return res.success(Number(Number(0).get_num(str(structure[0]))).set_pos(node.pos_start, node.pos_end))
+            try:
+                return res.success(Number(int(str(structure[0]))).set_pos(node.pos_start, node.pos_end))
+            except ValueError:
+                return res.success(Number(float(str(structure[0]))).set_pos(node.pos_start, node.pos_end))
         elif len(structure) == 1 and isinstance(structure[0], String):
             return res.success(String(str(structure[0])).set_pos(node.pos_start, node.pos_end))
         return res.success(Structure(structure).set_pos(node.pos_start, node.pos_end))
@@ -1066,6 +1108,7 @@ class Interpreter:
         context.symbol_table.set("null", null, [lib_name])
         context.symbol_table.set("true", true, [lib_name])
         context.symbol_table.set("false", false, [lib_name])
+        context.symbol_table.set_spec("_moder_", String(lib_name), [lib_name])
         for var_name, value in context.symbol_table.symbols.items():
             if isinstance(value, Function) or isinstance(value, BuiltinFunction):
                 context.symbol_table.set(var_name, value, [lib_name])
@@ -1136,7 +1179,8 @@ class Interpreter:
                 return res.failure(
                     Error.DefinedError(
                         node.pos_start, node.pos_end,
-                        f"'{var_name}' is not defined")
+                        f"'{var_name if var_name[0] != "$" and var_name[-1] != "$" else var_name[1:-1]}' "
+                        f"is not defined")
                 )
             if not isinstance(value, dict):
                 value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
@@ -1151,7 +1195,7 @@ class Interpreter:
                     return res.failure(
                         Error.DefinedError(
                             node.pos_start, node.pos_end,
-                            f"'{f}' is not defined")
+                            f"'{f}' is not defined, ({' -> '.join(list(map(str, father)))})")
                     )
             try:
                 value = symbol[var_name]
@@ -1159,7 +1203,8 @@ class Interpreter:
                 return res.failure(
                     Error.DefinedError(
                         node.pos_start, node.pos_end,
-                        f"'{var_name}' is not defined")
+                        f"'{var_name if var_name[0] != "$" and var_name[-1] != "$" else var_name[1:-1]}'"
+                        f" is not defined, ({' -> '.join(list(map(str, father)))})")
                 )
         return res.success(value)
 
@@ -1170,7 +1215,10 @@ class Interpreter:
         if isinstance(value, Null):
             ESCAPE.update({"Null": value.type})
         if res.should_return(): return res
-        context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
+        if var_name[:1] == "_" and var_name[-1:] == "_":
+            context.symbol_table.set_spec(var_name, value.get() if isinstance(value, Null) else value, father)
+        else:
+            context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
         return res.success(
             Null(
                 ESCAPE[str(type(value).__name__)],
@@ -1337,7 +1385,7 @@ class Interpreter:
         value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
 
         for arg_node in node.arg_nodes:
-            args.append(res.register(self.visit(arg_node, context, father, ide_call_function_table)))
+            args.append(res.register(self.visit(arg_node, context, None, ide_call_function_table)))
             if res.should_return(): return res
         value_to_call.ide_call_function_table = ide_call_function_table
         return_value = res.register(value_to_call.execute(args))
@@ -1402,6 +1450,16 @@ class Interpreter:
             result, error = left.is_less_equals(right)
         elif node.op_tok.type == Token.TLP_NOT_EQUAL:
             result, error = left.is_not_equals(right)
+        elif node.op_tok.type == Token.TLP_XOR:
+            result, error = left.xor(right)
+        elif node.op_tok.type == Token.TLP_AND_MOVEMENT:
+            result, error = left.and_move(right)
+        elif node.op_tok.type == Token.TLP_OR_MOVEMENT:
+            result, error = left.or_move(right)
+        elif node.op_tok.type == Token.TLP_LEFT_MOVEMENT:
+            result, error = left.left_move(right)
+        elif node.op_tok.type == Token.TLP_RIGHT_MOVEMENT:
+            result, error = left.right_move(right)
 
         elif node.op_tok.matches(Token.TTT_KEYWORD, "and"):
             result, error = left.anded_by(right)
@@ -1453,6 +1511,8 @@ global_symbol_table.set("timestamp", timestamp)
 global_symbol_table.set("calllist", calllist)
 global_symbol_table.set("length", len_)
 global_symbol_table.set("run", run_)
+
+global_symbol_table.set_spec("_moder_", String("_this_"))
 
 global_symbol_table.set("idle", idle)
 builtin = [

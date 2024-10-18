@@ -9,6 +9,7 @@ import Error
 punctuation = "!@#$%^&;:<>,.?\\|`~([{" + string.whitespace
 
 # 类型(Token Type)
+# Basic
 TTT_STR = "STR"
 TTT_INT = "INT"
 TTT_FLOAT = "FLOAT"
@@ -16,6 +17,12 @@ TTT_FLOAT = "FLOAT"
 TTT_ARRAY = "ARRAY"
 TTT_STRUCTURE = "STRUCTURE"
 TTT_CLUSTER = "CLUSTER"
+
+TTT_GETTER = "GETSPEC"
+
+TTT_BIN = "BIN"
+TTT_HEX = "HEX"
+TTT_OCT = "OCT"
 
 TTT_KEYWORD = "KEYWORD"
 TTT_IDENTIFIER = "IDENTIFIER"
@@ -47,11 +54,19 @@ TCP_DIV = "DIV"   # /
 TCP_INTEGER_DIV = "TRUNCATION"  # //
 TCP_MOD = "MOD"  # %
 ## 逻辑(Logic Pos)
+TLP_GETTER = "GETTER"  # $
 TLP_WHETHER = "WHETHER"  # ?
 TLP_NOT = "NOT"  # !
 TLP_NOT_EQUAL = "NOTEQUAL"  # !=
+
+TLP_XOR = "XOR"  # ^
 TLP_AND = "AND"  # &
 TLP_OR = "OR"  # |
+TLP_AND_MOVEMENT = "AND_MOVEMENT"  # &&
+TLP_OR_MOVEMENT = "OR_MOVEMENT"  # ||
+TLP_LEFT_MOVEMENT = "LEFT_MOVEMENT"   # <<
+TLP_RIGHT_MOVEMENT = "RIGHT_MOVEMENT"   # >>
+
 TLP_GREATER = "GREATER"  # >
 TLP_GREATER_EQUAL = "GREATEREQUAL"  # >=
 TLP_LESS = "LESS"  # <
@@ -81,11 +96,19 @@ PREVIEW = {
     "//": TCP_INTEGER_DIV,
     "%": TCP_MOD,
 
+    "$": TLP_GETTER,
     "?": TLP_WHETHER,
     "!": TLP_NOT,
+
+    "^": TLP_XOR,
+    "&": TLP_AND_MOVEMENT,
+    "|": TLP_OR_MOVEMENT,
+    "&&": TLP_AND,
+    "||": TLP_OR,
+    "<<": TLP_LEFT_MOVEMENT,
+    ">>": TLP_RIGHT_MOVEMENT,
+
     "!=": TLP_NOT_EQUAL,
-    "&": TLP_AND,
-    "|": TLP_OR,
     ">": TLP_GREATER,
     ">=": TLP_GREATER_EQUAL,
     "<": TLP_LESS,
@@ -159,7 +182,7 @@ class Position:
 
 
 class Token:
-    def __init__(self, type_: str, value: str | list | None = None, pos_start=None, pos_end=None):
+    def __init__(self, type_: str, value=None, pos_start=None, pos_end=None):
         self.value = value
         self.type = type_
 
@@ -184,7 +207,7 @@ class Token:
 class Lexer:
     def __init__(self, run_mode: str, syntax: str) -> None:
         self._syntax = syntax
-        self._pos = Position(-1, 0, -1, run_mode, syntax)
+        self._pos = Position(-1, 1, -1, run_mode, syntax)
         self._current_char = None
         self._err = None
 
@@ -204,11 +227,8 @@ class Lexer:
             # 制作符号(make pos)
             if self._current_char in PREVIEW.keys():
                 self._err, t = self._make_pos(PREVIEW)
-                if t != "null":
-                    if isinstance(t, list):
-                        tokens += t
-                    else:
-                        tokens.append(t)
+                if "null" not in t:
+                    tokens.extend(t)
             # 制作数字(make number)
             elif self._current_char in string.digits:
                 self._err, t = self._make_number()
@@ -287,24 +307,51 @@ class Lexer:
         char = ""
         dot_count = 0
         pos_start = self._pos.copy()
-        while self._current_char is not None and self._current_char in string.digits + ".":
+        is_base: bool | str = False
+        base_string = string.digits + '.bxo'
+        while self._current_char is not None and \
+                self._current_char in base_string:
             if self._current_char == ".":
                 dot_count += 1
+            elif self._current_char == "x":
+                char = char[1:]
+                is_base = TTT_HEX
+                base_string = string.hexdigits
+                self._advanced()
+                continue
+            elif self._current_char == "b":
+                char = char[1:]
+                is_base = TTT_BIN
+                base_string = "10"
+                self._advanced()
+                continue
+            elif self._current_char == "o":
+                char = char[1:]
+                is_base = TTT_OCT
+                base_string = string.octdigits
+                self._advanced()
+                continue
             if dot_count >= 2:
                 return [
                     Error.InvalidSyntaxError(
                         pos_start,
                         self._pos.copy(),
-                        char
+                        char + '.'
                     ),
                     None
                 ]
             char += self._current_char
             self._advanced()
         if dot_count == 1:
-            return [None, Token(TTT_FLOAT, char, pos_start, self._pos)]
+            return [None, Token(TTT_FLOAT, float(char), pos_start, self._pos)]
+        elif is_base == TTT_BIN:
+            return [None, Token(TTT_BIN, char, pos_start, self._pos)]
+        elif is_base == TTT_OCT:
+            return [None, Token(TTT_OCT, char, pos_start, self._pos)]
+        elif is_base == TTT_HEX:
+            return [None, Token(TTT_HEX, char, pos_start, self._pos)]
         else:
-            return [None, Token(TTT_INT, char, pos_start, self._pos)]
+            return [None, Token(TTT_INT, int(char), pos_start, self._pos)]
 
     def _make_identifier(self):
         char = ""
@@ -320,42 +367,44 @@ class Lexer:
             return Token(TTT_IDENTIFIER, char, pos_start, self._pos)
 
     def _make_pos(self, preview) -> list:
-        char = ""
+        chars = ""
         pos_start = self._pos
+        tokens = []
 
         while self._current_char is not None and self._current_char in preview.keys():
-            char += self._current_char
+            chars += self._current_char
             self._advanced()
-        if char in preview.keys():
+
+        if chars in preview.keys():
+            chars = [chars]
+        for char in chars:
             if preview[char] == TTP_LEFT_COMMENT:
                 err = self._skip_comment()
                 if err:
                     return [err, None]
-                return [None, "null"]
+                tokens.append('null')
+                continue
 
-            elif char in ("!", "&", "|"):
+            elif char in ("!", "&&", "||"):
                 transfer = {
                     "!": "not",
-                    "&": "and",
-                    "|": "or"
+                    "&&": "and",
+                    "||": "or"
                 }
-                return [None, Token(TTT_KEYWORD, transfer[char], pos_start=pos_start, pos_end=self._pos)]
+                tokens.append(Token(TTT_KEYWORD, transfer[char], pos_start=pos_start, pos_end=self._pos))
+                continue
 
-            return [None, Token(preview[char], pos_start=pos_start, pos_end=self._pos)]
+            elif char == "$":
+                get_char = ''
+                while self._current_char is not None and self._current_char in string.ascii_letters + "_":
+                    get_char += self._current_char
+                    self._advanced()
 
-        elif char.count("-") == len(char) or char.count("+") == len(char) or \
-                char.count(";") == len(char):
-            return [None, [Token(preview[char[0]], pos_start=pos_start, pos_end=self._pos)] * len(char)]
+                tokens.append(Token(TTT_GETTER, get_char, pos_start=pos_start, pos_end=self._pos))
+                continue
 
-        else:
-            return [
-                Error.IllegalCharError(
-                    pos_start,
-                    self._pos.copy(),
-                    char
-                ),
-                None
-            ]
+            tokens.append(Token(preview[char], pos_start=pos_start, pos_end=self._pos))
+        return [None, tokens]
 
     def _make_include(self, match_pos) -> list:
         pos_start = self._pos.copy()

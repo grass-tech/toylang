@@ -239,4 +239,6 @@ class Idle(tk.Tk):
         for i in range(1, len(text)):
             self.line_bar.insert(tk.END, f"{i}\n")
         self.line_bar.configure(state=tk.DISABLED)
-        highlight.highlight(self.content_bar, self.syntaxes, self.builtin, settings)
+        threading.Thread(
+            target=highlight.highlight,
+            args=(self.content_bar, self.syntaxes, self.builtin, settings)).start()

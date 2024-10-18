@@ -10,26 +10,31 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import idle.highlight as highlight
 
 
-preview_code = """/* This is a preview code */
+preview_code = """/* This is a very useful preview program */
+/* ToyLang is a scripts language */
+include utils
 
-function main() {
-    println('Welcome to use ToyLang!');
-    var q = readline('');
-    if q == 'hello' {
-        println('Hello, World');
+println('Welcome to use ToyLang Interpretor with GUI!')
+
+var a = int(readline('Type a minimum number: '))
+repeat meet true {
+    var b = int(readline('Type a maximum number(<=20): '))
+    if b > 20 {
+        println('Error Value (over 20)')
     } else {
-        println('This is ToyLang');
+        break
     }
-    var number = int(readline(''));
-    if number == 0 {
-        println(114514 + number);
-    } else {
-        println(0.0);
-    }
-    return ['Finished', 'Finished'];
 }
 
-main();
+var result = 0
+for i from a to b {
+    var result = result + i
+}
+
+println('sum result: ' + string(result))
+println(string(b) + " fibonacci", ' ')
+println(utils.factorial_fib(b))
+
 """
 
 

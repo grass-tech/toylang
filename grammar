@@ -1,67 +1,211 @@
-# 说明
+===== Token Type =====
+' | " : STRING
+1234567890 | 1234567890. : INT | FLOAT
+() : STRUCTURE
+[] : ARRAY
+{} : CLUSTER
 
-- 关键字 keyword
-var <VarName> = <Expr>
-              ^
-              |
-            EQUAL
++ : PLUS
+- : MINUS
+* : MUL
+/ : DIV
+// : INTEGER_DIV
+** : POW
+% : MOD
+< : LESS
+> : GREATER
+= : EQUAL
+== : EQEQUAL
+<= : LESSEQUAL
+>= : GREATEREQUAL
+!= : NOTEQUAL
 
-if <Condition> {println('test')}
-                   ^
-                   |
-            BUILTIN_FUNCTION
-elseif <Condition> {println("test elseif")}
-else {println("test else")}
-
-for <VarName> from [INT] to [INT] (step [INT] -> 1) {println(<VarName>)}
-               ^                         ^                   ^
-               |                         |                   |
-             KEYWORD                CHOOSEABLE            CLUSTER
-
-foriter <VarName> by (<Var> | [Array]) {println(<VarName>)}
-
-repeat (meet | until) {println('Repeat Again')}
-             ^
-             |
-         Choose One
-
-delete <Variable>
-           ^
-           |
-     Delete Variable
-
-function <FuncName> {println('enter function')}
-
-- 内置函数
-输出到标准屏幕 -> println(('<String>' | <Number> | <Expression*>))
-从用户获取输入 -> readline('<String>' | <Number> | <Expression*>)
-获取字符串/数组的长度 -> length('<String>' | <Expression*> | [<Array>])
-将值转换成整数 -> int('<String>' | <Number> | <Expression*>)
-将值转换成浮点数 -> float('<String>' | <Number> | <Expression*>)
-将值转换成字符串 -> string('<String>' | <Number> | <Expression*>)
-将值转换成布尔值 -> boolean('<String>' | <Number> | <Expression*>)
-将值转换成数组 -> array('<String>' | <Number> | <Expression*>)
-运行文件 -> run('<File>')
-
-
-# ADDITIONAL:
-    <VarName> ? <Expression> : <Expression> 三元表达式 Ternary Expression
-    <VarName> -> <AnotherVarName>  变量别名 Variable as another Name
-              ^
-              |
-          AS Character
-    ([Array] | [String])[<Number> | <Variable>] 切片 Subscripts
-                                   ^
-                                   |
-                                 Index
-
-低级Least: Number <- (PLUS | MINUS) -> Number
-中等Middle: Number <- (MUL | DIV) -> Number
-最高High: Number <- (POW | INTEGER_DIV) -> Number
-
-# Token令牌
 ! : NOT
-? : WHETHER
-| : OR
-& : AND
+&& : AND
+|| : OR
+
+^ : XOR
+~ : REVERSE
+& : AND_MOVEMENT
+| : OR_MOVEMENT
+<< : LEFT_MOVEMENT
+>> : RIGHT_MOVEMENT
+
+. : DOT
+, : COMMA
+: : COLON
+? : WEATHER
+; : NEWLINE
+) : RIGHT_PAR
+] : RIGHT_SQB
+} : RIGHT_BRACE
 -> : AS
+# : MACRO
+\ : ESCAPE
+$ : GETTER
+
+/* : LEFT_COMMENT
+*/ : RIGHT_COMMENT
+
+===== TYPE INTRODUCTION =====
+
+Language Type ALL : [Number[INT, FLOAT], STRING[Any], [Array[Any, ...]], Null[Null],
+                    Cluster[Statements, ...], Structure[Any, ...]]
+
+Number Type: Any float or integer without quotation marks.
+String Type: Any character within quotation marks.
+Array Type: Any Expression within Square Brackets.
+Null Type: Any 'null' keyword or function defined default return value
+
+Cluster Type: Any Expression within Braces.
+Structure Type: Any Expression within Parentheses.
+
+AttributeCall Type: Underline + IDENTIFIER + Underline, like this structure
+                    _example_ , _hello_, _toy_, _lang_  both AttributeCall
+
+                    Call this variable: last Underline add GETTER (Eq: $) and first too
+                    $_example_$, $_hello_$, $_toy_$, $_lang_$ both Call This Variable
+
+===== COMPUTING ORDER INTRODUCTION =====
+
+(MINUS | PLUS) : Lowest Role                    -> arith
+(MUL | DIV | INTEGER DIV | MOD) : Middle Role   -> term
+(POW | Caller) : Second Highest Role            -> power
+(Compare Pos) : Highest Role                    -> compare_expr
+
+===== KEYWORDS INTRODUCTION =====
+
+# KEYWORDS [
+    // define the variable by 'var'
+    var <IDENTIFIER> = <Expression*>
+
+    // delete a variable by 'delete'
+    delete <IDENTIFIER>
+
+    # Condition Controller
+    and -> True and True: True | False and True: False
+    or -> True or False: True | False or False: False
+    not -> False: True | True: False
+
+    if ( <Condition*> | <Expression*> ) {
+        <Statements>;
+        <Expression*>;
+    }
+    elseif ( <Condition*> | <Expression*> ) {
+        <Statements>;
+        <Expression*>;
+    }
+    else {
+        <Statements>;
+        <Expression*>;
+    }
+
+    # Repeat Controller
+    // Iterate iterable object (Common Array or other iterable object) and copy to IDENTIFIER
+    // Then you can use it by IDENTIFIER quickly
+    foriter <IDENTIFIER> by ( <Array> | <Iterable>) {
+        <Statements>;
+        <Expression*>;
+    }
+
+    // Iterate a number from value to value, optional argument 'step' is the step to the value
+    for <IDENTIFIER> from <Expression*> to <Expression*> (step <Expression*> = 1) {
+        <Statements>;
+        <Expression*>;
+    }
+    // repeat a condition when the condition is true
+    repeat meet (<Expression*> | <Condition*>) {
+        <Statements>;
+        <Expression*>;
+    }
+    // repeat a condition until the condition is false
+    repeat until (<Expression*> | <Condition*>) {
+        <Statements>;
+        <Expression
+    }
+
+    // break from the repeat
+    break
+
+    // jump this repeat
+    continue
+
+    # function defined
+    // define a function by 'function'
+    function <IDENTIFIER>(<Arguments1>, <Arguments2>, ...) {
+        <Statements>;
+        <Expression*>;
+    }
+
+    // return a value from function
+    return <Expression*>
+
+    # FIle I/O
+    // import headers by 'include'
+    include <File Headers>
+]
+
+
+===== BUILTIN-FUNCTION INTRODUCTION =====
+println     -> Output to the standard screen
+readline    -> Get the user input
+
+int         -> Convert a value to the integer type
+float       -> Convert a value to the float type
+string      -> Convert a value to the string type
+array       -> Convert a value to the array type
+boolean     -> Convert a value to the boolean type
+
+timestamp   -> Get the current timestamp
+calllist    -> Get the callable object's callable list
+length      -> Get the length
+run         -> Run the ToyLang source file
+
+idle         -> Open official IDLE
+
+===== BUILTIN-VARIABLE INTRODUCTION =====
+
+true      -> 1
+false     -> 0
+null      -> 0
+
+// If need call variable below, need use GETTER type (Eq: $) after it and before it
+// e.g. $_moder_$
+// e.g. $_caller_$
+
+// Get the mode when running
+_moder_   -> _this_ | <FileName>
+
+// Get the caller when running or importing
+_caller_  -> _self_ | _<Headers>_
+
+===== SELF-OPTION INTRODUCTION =====
+
+Subscripts : <Subscriptable>[<Expression*>]     -> `[]` after <Subscriptable> means subscripts
+Terminator : <IDENTIFIER> ? true : false        -> if <IDENTIFIER> is true then choose left value
+Nick-Variable : <IDENTIFIER1> -> <IDENTIFIER2>  -> This way can copy attribute to the IDENTIFIER2
+                                                   if IDENTIFIER1's value changed, IDENTIFIER2 will change, too
+
+
+
+
+
+===== EXAMPLE CODES =====
+```
+/* fibonacci with Repeat */
+function fibonacci(n=20) {
+    var result = [];
+    for i from 0 to n {
+        if i <= 1 {
+            var result = result + [1];
+        } else {
+            var result = result + (result[i-2] + result[i-1]);
+        }
+    }
+    return result;
+}
+
+println(fibonacci(int(readline('Type a number: '))))
+
+```
+
