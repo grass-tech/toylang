@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Error
 
-punctuation = "@#$%;:<>\\`([{" + string.whitespace
+punctuation = "@#$%;:\\`{[(" + string.whitespace
 
 # 类型(Token Type)
 # Basic
@@ -126,6 +126,7 @@ PREVIEW_LOGIC = {
     "%": TCP_MOD,
 }
 SYNTAX = [
+    "global",
     "private",
 
     "var",

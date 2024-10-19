@@ -205,7 +205,7 @@ class Idle(tk.Tk):
             lambda event: IdleFunction.preference(self.winfo_x(), self.winfo_y(), settings, syntaxes, builtin))
 
         self.content_bar.bind("<Return>", IdleFunction(self).auto_indent)
-        self.content_bar.bind("<Key>", lambda event: self.update_highlight())
+        threading.Thread(target=self.update_highlight).start()
         self.content_bar.bind("<KeyRelease>", self._collect)
 
     @staticmethod
@@ -230,6 +230,7 @@ class Idle(tk.Tk):
 
     def update_highlight(self):
         highlight.highlight(self.content_bar, self.syntaxes, self.builtin, settings)
+        self.after(500, self.update_highlight)
 
     def update_line(self):
         text = self.content_bar.get(0.0, tk.END)

@@ -244,6 +244,11 @@ class Number(Value):
 
     def xor(self, other):
         if isinstance(other, Number):
+            if isinstance(self.value, float) or isinstance(other.value, float):
+                return None, Error.InvalidValueError(
+                    self.pos_start, other.pos_end,
+                    f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
             return Number(self.value ^ other.value), None
         else:
             return None, Error.InvalidValueError(
@@ -252,35 +257,54 @@ class Number(Value):
 
     def or_move(self, other):
         if isinstance(other, Number):
+            if isinstance(self.value, float) or isinstance(other.value, float):
+                return None, Error.InvalidValueError(
+                    self.pos_start, other.pos_end,
+                    f"'|' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
             return Number(self.value | other.value), None
         else:
             return None, Error.InvalidValueError(
                 self.pos_start, other.pos_end,
-                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+                f"'|' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def and_move(self, other):
         if isinstance(other, Number):
+            if isinstance(self.value, float) or isinstance(other.value, float):
+                return None, Error.InvalidValueError(
+                    self.pos_start, other.pos_end,
+                    f"'&' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
             return Number(self.value & other.value), None
         else:
             return None, Error.InvalidValueError(
                 self.pos_start, other.pos_end,
-                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+                f"'&' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def left_move(self, other):
         if isinstance(other, Number):
+            if isinstance(self.value, float) or isinstance(other.value, float):
+                return None, Error.InvalidValueError(
+                    self.pos_start, other.pos_end,
+                    f"'<<' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+
             return Number(self.value << other.value), None
         else:
             return None, Error.InvalidValueError(
                 self.pos_start, other.pos_end,
-                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+                f"'<<' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def right_move(self, other):
         if isinstance(other, Number):
+            if isinstance(self.value, float) or isinstance(other.value, float):
+                return None, Error.InvalidValueError(
+                    self.pos_start, other.pos_end,
+                    f"'>>' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
             return Number(self.value >> other.value), None
         else:
             return None, Error.InvalidValueError(
                 self.pos_start, other.pos_end,
-                f"'^' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
+                f"'>>' is not supported for type '{type(self).__name__}' and '{type(other).__name__}'")
 
     def notted(self):
         return Number(0 if bool(self.value) else 1), None
@@ -605,6 +629,16 @@ class BaseFunction(Value):
         self.father = father
 
     def generate_new_context(self):
+        def check(var_name):
+            if '->' in var_name:
+                fte = var_name.split("->")[0]
+                caller = var_name.split("->")[-1]
+                if fte == str(self.father):
+                    new_context.symbol_table.set(caller, value)
+                    return True
+            elif '@' in var_name:
+                new_context.symbol_table.set(var_name, value)
+
         new_context = Context(self.name, self.context, self.pos_start)
         new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
 
@@ -614,23 +648,13 @@ class BaseFunction(Value):
         new_context.symbol_table.set("false", false)
         new_context.symbol_table.set_spec("_moder_", String(self.name))
         for var_name, value in self.context.symbol_table.symbols.items():
-            if '->' in var_name:
-                fte = var_name.split("->")[0]
-                caller = var_name.split("->")[-1]
-                if fte == str(self.father):
-                    new_context.symbol_table.set(caller, value)
-                    continue
+            if check(var_name): continue
             if isinstance(value, Function) or isinstance(value, BuiltinFunction):
                 new_context.symbol_table.set(var_name, value)
             if self.father is not None:
                 if isinstance(value, dict) and str(var_name) == self.father[0]:
                     for dict_key, dict_value in value.items():
-                        if '->' in dict_key:
-                            fte = dict_key.split("->")[0]
-                            caller = dict_key.split("->")[-1]
-                            if fte == str(self.father):
-                                new_context.symbol_table.set(caller, value)
-                                continue
+                        if check(var_name): continue
                         new_context.symbol_table.set(dict_key, dict_value)
                     continue
             if isinstance(value, dict):
@@ -778,6 +802,7 @@ class BuiltinFunction(BaseFunction):
         end_pos = str(exec_cft.symbol_table.get("end"))
         self.ide_call_function_table['println'](str(exec_cft.symbol_table.get('value')), end=end_pos)
         return Parser.RTResult().success(Null())
+
     execute_println.default_args_value = [String(""), String("\n")]
     execute_println.arg_names = ["value", "end"]
 
@@ -786,6 +811,7 @@ class BuiltinFunction(BaseFunction):
         if result is None:
             raise ValueError("readline()'s callable function should return a value")
         return Parser.RTResult().success(String(str(result)))
+
     execute_readline.default_args_value = [String("")]
     execute_readline.arg_names = ["value"]
 
@@ -796,6 +822,7 @@ class BuiltinFunction(BaseFunction):
                 f"Can't get length of type '{type(exec_cft.symbol_table.get('value')).__name__}'"
             ))
         return Parser.RTResult().success(Number(int(exec_cft.symbol_table.get('value').length())))
+
     execute_len.default_args_value = [None]
     execute_len.arg_names = ["value"]
 
@@ -835,23 +862,32 @@ class BuiltinFunction(BaseFunction):
             )
 
         return Parser.RTResult().success(Null())
+
     execute_run.default_args_value = [None]
     execute_run.arg_names = ["filename"]
 
     def execute_int(self, exec_cft):
         try:
-            return Parser.RTResult().success(Number(int(str(exec_cft.symbol_table.get('value')))))
+            if isinstance(exec_cft.symbol_table.get('decimal'), Number):
+                if exec_cft.symbol_table.get('decimal').value == 0:
+                    return Parser.RTResult().success(Number(int(str(exec_cft.symbol_table.get('decimal')))))
+                else:
+                    return Parser.RTResult().success(Number(int(
+                        round(float(str(exec_cft.symbol_table.get('value'))), 0))))
+
         except (ValueError, SyntaxError):
             return Parser.RTResult().failure(
                 Error.InvalidValueError(
                     self.pos_start, self.pos_end,
                     f"Can't literal for int() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
-    execute_int.default_args_value = [None]
-    execute_int.arg_names = ["value"]
+
+    execute_int.default_args_value = [None, Number(0)]
+    execute_int.arg_names = ["value", "decimal"]
 
     def execute_str(self, exec_cft):
         return Parser.RTResult().success(String(str(exec_cft.symbol_table.get('value'))))
+
     execute_str.default_args_value = [None]
     execute_str.arg_names = ["value"]
 
@@ -864,11 +900,13 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for float() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
+
     execute_float.default_args_value = [None]
     execute_float.arg_names = ["value"]
 
     def execute_bool(self, exec_cft):
         return Parser.RTResult().success(exec_cft.symbol_table.get("value").boolean())
+
     execute_bool.default_args_value = [None]
     execute_bool.arg_names = ["value"]
 
@@ -882,6 +920,7 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't literal for array() with: '{str(exec_cft.symbol_table.get('value'))}'")
             )
+
     execute_array.default_args_value = [None]
     execute_array.arg_names = ["value"]
 
@@ -911,6 +950,7 @@ class BuiltinFunction(BaseFunction):
             if "$" in x: continue
             elements.append(x)
         return Parser.RTResult().success(Array(elements))
+
     execute_calllist.default_args_value = [None]
     execute_calllist.arg_names = ["object"]
 
@@ -934,12 +974,14 @@ class BuiltinFunction(BaseFunction):
                 self.pos_start, self.pos_end,
                 "The time is out of argument range."
             ))
+
     execute_timestamp.default_args_value = [String('[NOW]'), String("%Y-%m-%d %H:%M:%S")]
     execute_timestamp.arg_names = ['nowtime', 'format']
 
     def execute_idle(self, exec_cft):
         Idle.Idle(Token.SYNTAX, builtin).mainloop()
         return Parser.RTResult().success(Null())
+
     execute_idle.default_args_value = []
     execute_idle.arg_names = []
 
@@ -1013,6 +1055,7 @@ class SymbolTable:
             current_dict[name] = value
 
             return d
+
         if father is None:
             self.symbols[name] = value
         elif isinstance(father, list):
@@ -1032,6 +1075,7 @@ class SymbolTable:
             current_dict[f"${name}$"] = value
 
             return d
+
         if father is None:
             self.symbols[f"${name}$"] = value
         elif isinstance(father, list):
@@ -1039,8 +1083,40 @@ class SymbolTable:
         else:
             raise Exception("father should be list")
 
-    def remove(self, name):
-        del self.symbols[name]
+    def remove(self, name, father=None):
+        def delete_nested_key(data, take_list, finall_take):
+            if not take_list:
+                if finall_take in data:
+                    del data[finall_take]
+                return data
+
+            current_key = take_list[0]
+
+            if current_key in data and isinstance(data[current_key], dict):
+                data[current_key] = delete_nested_key(data[current_key], take_list[1:], finall_take)
+
+            return data
+
+        def remove_key_from_dict(d, key_to_remove):
+            if isinstance(d, dict):
+                new_dict = {k: v for k, v in d.items() if k != key_to_remove}
+                for k, v in new_dict.items():
+                    if isinstance(v, dict):
+                        new_dict[k] = remove_key_from_dict(v, key_to_remove)
+
+                return new_dict
+            else:
+                return d
+
+        try:
+            if father and not isinstance(father, set):
+                self.symbols = delete_nested_key(self.symbols, father, name)
+            elif isinstance(father, set):
+                self.symbols = remove_key_from_dict(self.symbols, name)
+            else:
+                del self.symbols[name]
+        except KeyError:
+            pass
 
 
 ESCAPE = {
@@ -1205,47 +1281,47 @@ class Interpreter:
 
     @staticmethod
     def visit_VarAccessNode(node, context, father, ide_call_function_table):
-        res = Parser.RTResult()
-        var_name = node.var_name_tok.value
-        if father is None:
-            value = context.symbol_table.get(var_name)
-            private_value = context.symbol_table.get(f"{father}->{var_name}")
-            if value is None and private_value is None:
-                return res.failure(
-                    Error.DefinedError(
-                        node.pos_start, node.pos_end,
-                        f"'{var_name if var_name[0] != "$" else var_name[1:]}' "
-                        f"is not defined")
-                )
-            if value is not None:
-                if not isinstance(value, dict):
-                    value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
-                else:
+        def get_value_from_symbol_table(key, symbol_table):
+            value = symbol_table.get(key)
+            if value is None:
+                return None
+            if not isinstance(value, dict):
+                return res.success(value.copy().set_pos(node.pos_start, node.pos_end).set_context(context))
+            try:
+                return res.success(value[var_name].copy().set_pos(node.pos_start, node.pos_end).set_context(context))
+            except KeyError:
+                try:
+                    return res.success(
+                        value[f"@{var_name}"].copy().set_pos(node.pos_start, node.pos_end).set_context(context))
+                except KeyError:
                     try:
-                        value = value[var_name].copy().set_pos(node.pos_start, node.pos_end).set_context(context)
-                    except KeyError:
-                        try:
-                            value = value[f"None->{var_name}"].copy().set_pos(
-                                node.pos_start, node.pos_end).set_context(context)
-                        except KeyError:
-                            return res.failure(
-                                Error.DefinedError(
-                                    node.pos_start, node.pos_end,
-                                    f"private objects")
-                            )
-            else:
-                if not isinstance(private_value, dict):
-                    value = private_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
-                else:
-                    try:
-                        value = private_value[f"None->{var_name}"].copy().set_pos(
-                            node.pos_start, node.pos_end).set_context(context)
+                        return res.success(
+                            value[f"#{var_name}"].copy().set_pos(node.pos_start, node.pos_end).set_context(
+                                context))
                     except KeyError:
                         return res.failure(
                             Error.DefinedError(
                                 node.pos_start, node.pos_end,
-                                f"private objects")
+                                f"private objects"
+                            )
                         )
+
+        res = Parser.RTResult()
+        var_name = node.var_name_tok.value
+
+        if father is None:
+            value = get_value_from_symbol_table(var_name, context.symbol_table)
+            if value is None:
+                value = get_value_from_symbol_table(f"@{var_name}", context.symbol_table)
+            if value is None:
+                value = get_value_from_symbol_table(f"#{var_name}", context.symbol_table)
+            if value is None:
+                return res.failure(
+                    Error.DefinedError(
+                        node.pos_start, node.pos_end,
+                        f"'{var_name if var_name[0] != '$' else var_name[1:]}' is not defined"
+                    )
+                )
         else:
             symbol = context.symbol_table.symbols
             for f in father:
@@ -1255,46 +1331,119 @@ class Interpreter:
                     return res.failure(
                         Error.DefinedError(
                             node.pos_start, node.pos_end,
-                            f"'{f}' is not defined, ({' -> '.join(list(map(str, father)))})")
+                            f"'{f}' is not defined, ({' -> '.join(list(map(str, father)))})"
+                        )
                     )
             try:
-                value = symbol[var_name]
-                return res.success(value)
-            except KeyError:
+                value = res.success(symbol[var_name])
+            except* KeyError:
                 try:
-                    _ = symbol[f"None->{var_name}"]
-                    return res.failure(
-                        Error.DefinedError(
-                            node.pos_start, node.pos_end,
-                            f"private object")
-                    )
-                except KeyError:
-                    return res.failure(
-                        Error.DefinedError(
-                            node.pos_start, node.pos_end,
-                            f"'{var_name if var_name[0] != "$" else var_name[1:-1]}'"
-                            f" is not defined, ({' -> '.join(list(map(str, father)))})")
-                    )
-        return res.success(value)
+                    value = res.success(global_symbol_table.get(f"@{var_name}"))
+                except* KeyError:
+                    try:
+                        _ = symbol[f"#{var_name}"]
+                        value = res.failure(
+                            Error.DefinedError(
+                                node.pos_start, node.pos_end,
+                                f"private object"
+                            )
+                        )
+                    except* KeyError:
+                        value = res.failure(
+                            Error.DefinedError(
+                                node.pos_start, node.pos_end,
+                                f"'{var_name if var_name[0] != '$' else var_name[1:-1]}' is not defined, ({' -> '.join(list(map(str, father)))})"
+                            )
+                        )
+
+        return value
 
     def visit_VarAssignNode(self, node, context, father, ide_call_function_table):
+        def replace_neste(lst, idx, value):
+            if len(idx) == 1:
+                lst[idx[0]] = value
+            else:
+                replace_neste(
+                    lst[idx[0]].elements if isinstance(lst[idx[0]], Array) else lst[idx[0]],
+                    idx[1:], value)
+            return lst
+
+        def handle_assignment(var_name, value, index_list=None, private=False, type_='copy'):
+            if index_list and type_ == "CopyWithIndex":
+                index_list = [res.register(self.visit(inl, context, father, ide_call_function_table)).value for inl in
+                              index_list]
+                if res.should_return(): return res
+
+                original_variable = res.register(
+                    self.visit_VarAccessNode(Parser.VarAccessNode(node.var_name_tok), context, father,
+                                             ide_call_function_table))
+                if res.should_return(): return res
+
+                if isinstance(original_variable, Array):
+                    original_variable = original_variable.elements
+                    try:
+                        new_value = Array(replace_neste(original_variable, index_list, value))
+                    except IndexError:
+                        return res.failure(Error.OutOfRangeError(
+                            node.pos_start, node.pos_end,
+                            f"The index is out of maximum range"
+                        ))
+                else:
+                    return res.failure(Error.InvalidTypeError(
+                        node.pos_start, node.pos_end,
+                        f"{type(original_variable).__name__} not supported for subscripts"
+                    ))
+
+                if private:
+                    context.symbol_table.set(f"#{var_name}", new_value, index_list)
+                else:
+                    if f"@{var_name}" not in global_symbol_table.symbols.keys():
+                        context.symbol_table.set(var_name, new_value, index_list)
+                    else:
+                        context.symbol_table.remove(var_name, {"all"})
+                        global_symbol_table.remove(var_name, {'all'})
+                        global_symbol_table.set(f"@{var_name}", new_value)
+
+            else:
+                if private:
+                    context.symbol_table.set(f"#{var_name}", value, index_list)
+                else:
+                    if f"@{var_name}" not in global_symbol_table.symbols.keys():
+                        context.symbol_table.set(var_name, value, father)
+                    else:
+                        context.symbol_table.remove(var_name, {"all"})
+                        global_symbol_table.remove(var_name, {'all'})
+                        global_symbol_table.set(f"@{var_name}", value)
+
         res = Parser.RTResult()
         var_name = node.var_name_tok.value
         value = res.register(self.visit(node.value_node, context, father, ide_call_function_table))
         if isinstance(value, Null):
             ESCAPE.update({"Null": value.type})
         if res.should_return(): return res
+
+        value = value.get() if isinstance(value, Null) else value
+        if node.index_list:
+            idf = node.index_list
+            type_ = "CopyWithIndex"
+        else:
+            idf = father
+            type_ = 'copy'
         if node.is_private is False or (node.is_private is True and father is None):
             if var_name[:2] == "__" and var_name[-2:] == "__":
-                context.symbol_table.set_spec(var_name, value.get() if isinstance(value, Null) else value, father)
+                if err := handle_assignment(var_name, value, idf, False, type_):
+                    return err
             else:
-                context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
+                if err := handle_assignment(var_name, value, idf, False, type_):
+                    return err
         else:
-            context.symbol_table.set(f"None->{var_name}", value.get() if isinstance(value, Null) else value, father)
+            if err := handle_assignment(var_name, value, idf, True, type_):
+                return err
+
         return res.success(
             Null(
                 ESCAPE[str(type(value).__name__)],
-                value.get() if isinstance(value, Null) else value))
+                value))
 
     @staticmethod
     def visit_DeleteNode(node, context, father, ide_call_function_table):
@@ -1307,6 +1456,22 @@ class Interpreter:
                     f"'{var_name}' is not defined")
             )
         context.symbol_table.remove(var_name)
+        return res.success(Null())
+
+    def visit_GlobalNode(self, node, context, father, ide_call_function_table):
+        res = Parser.RTResult()
+
+        tok_list = []
+        tok_value = []
+        for vnt in node.var_name_tok:
+            tok_list.append(vnt.value)
+        for vc in node.var_call:
+            tok_value.append(res.register(self.visit(vc, context, father, ide_call_function_table)))
+        for var in list(zip(tok_list, tok_value)):
+            context.symbol_table.remove(var[0], {'all'})
+            global_symbol_table.remove(var[0], {'all'})
+            global_symbol_table.set(f"@{var[0]}", var[1])
+
         return res.success(Null())
 
     def visit_IfNode(self, node, context, father, ide_call_function_table):
@@ -1357,7 +1522,7 @@ class Interpreter:
 
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
-                res.loop_should_break is False and res.loop_should_continue is False: return res
+                    res.loop_should_break is False and res.loop_should_continue is False: return res
 
             if res.loop_should_break:
                 break
@@ -1383,7 +1548,7 @@ class Interpreter:
 
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
-                res.loop_should_break is False and res.loop_should_continue is False: return res
+                    res.loop_should_break is False and res.loop_should_continue is False: return res
 
             if res.loop_should_break:
                 break
@@ -1407,7 +1572,7 @@ class Interpreter:
             if len(node.cluster_nodes) == 1: break
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
-                res.loop_should_break is False and res.loop_should_continue is False: return res
+                    res.loop_should_break is False and res.loop_should_continue is False: return res
 
             if res.loop_should_break:
                 break
@@ -1446,7 +1611,7 @@ class Interpreter:
         if node.var_name_tok and (node.is_private is False or (node.is_private is True and father is None)):
             context.symbol_table.set(func_name, func_value, father)
         elif node.is_private is True:
-            context.symbol_table.set(f"None->{func_name}", func_value, father)
+            context.symbol_table.set(f"#{func_name}", func_value, father)
         return res.success(Null())
 
     def visit_CallFunctionNode(self, node, context, father, ide_call_function_table):
@@ -1621,10 +1786,14 @@ def execute(fn, syntax, father=None, return_result=True, ide_call_function_table
         for element in result.value.elements:
             if isinstance(element, Null):
                 continue
-            if 'value' in dir(element): fan_res.append(str(element.value))
-            elif 'name' in dir(element): fan_res.append(str(element))
-            elif 'element' in dir(element): fan_res.append(str(element.elements))
-            else: fan_res.append(str(element))
+            if 'value' in dir(element):
+                fan_res.append(str(element.value))
+            elif 'name' in dir(element):
+                fan_res.append(str(element))
+            elif 'element' in dir(element):
+                fan_res.append(str(element.elements))
+            else:
+                fan_res.append(str(element))
         if return_result and len(fan_res) > 0:
             return fan_res
         else:

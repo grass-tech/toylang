@@ -93,10 +93,11 @@ class VarAccessNode:
 
 
 class VarAssignNode:
-    def __init__(self, var_name_tok, value_node, is_private=False):
+    def __init__(self, var_name_tok, value_node, is_private=False, index_list: list | None=None):
         self.var_name_tok = var_name_tok
         self.value_node = value_node
         self.is_private = is_private
+        self.index_list = index_list
 
         self.pos_start = self.var_name_tok.pos_start
         self.pos_end = self.value_node.pos_end
@@ -182,6 +183,15 @@ class BreakNode:
 # 跳出本次循环节点
 class ContinueNode:
     def __init__(self, pos_start, pos_end):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+
+# 声明全局
+class GlobalNode:
+    def __init__(self, var_name_tok, var_call, pos_start, pos_end):
+        self.var_name_tok = var_name_tok
+        self.var_call = var_call
         self.pos_start = pos_start
         self.pos_end = pos_end
 
@@ -601,6 +611,11 @@ class Parser:
             return res.success(cluster_expr)
 
         # 关键字
+        # 对global的判断
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "global"):
+            global_expr = res.register(self.global_expr())
+            if res.error: return res
+            return res.success(global_expr)
         # 对private的按断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "private"):
             private_expr = res.register(self.private_expr())
@@ -733,6 +748,42 @@ class Parser:
             res.register_advancement()
             self.advanced()
 
+            if self.current_tok.type == Token.TTT_ARRAY:
+                index_list = []
+                while self.current_tok.type == Token.TTT_ARRAY:
+                    original_tokens, original_idx = self.tokens, self.tok_idx
+                    self.tokens, self.tok_idx = self.current_tok.value, -1
+
+                    res.register_advancement()
+                    self.advanced()
+                    index_list.append(res.register(self.expr()))
+                    if res.error: return res
+
+                    self.tokens, self.tok_idx = original_tokens, original_idx
+                    res.register_advancement()
+                    self.advanced()
+
+                if len(index_list) == 0:
+                    return res.failure(
+                        Error.InvalidValueError(self.current_tok.pos_start, self.current_tok.pos_end,
+                                                "The subscripts index is Null"))
+
+                if self.current_tok.type != Token.TLP_EQUAL:
+                    return res.failure(
+                        Error.InvalidSyntaxError(
+                            self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                            "lost character '=', did you forget '='?"
+                        )
+                    )
+
+                res.register_advancement()
+                self.advanced()
+
+                expr = res.register(self.expr())
+                if res.error: return res
+
+                return res.success(VarAssignNode(var_name, expr, index_list=index_list))
+
             if self.current_tok.type != Token.TLP_EQUAL:
                 return res.failure(
                     Error.InvalidSyntaxError(
@@ -743,8 +794,10 @@ class Parser:
 
             res.register_advancement()
             self.advanced()
+
             expr = res.register(self.expr())
             if res.error: return res
+
             return res.success(VarAssignNode(var_name, expr))
 
         node = res.register(self.bin_op(self.comp_expr, ((Token.TTT_KEYWORD, "and"), (Token.TTT_KEYWORD, "or"))))
@@ -987,6 +1040,38 @@ class Parser:
 
         return res.success((cases, else_case))
 
+    def global_expr(self):
+        res = ParserResult()
+        tok_list = []
+        tok_call = []
+        pos_start = self.current_tok.pos_start
+
+        if not self.current_tok.matches(Token.TTT_KEYWORD, "global"):
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "expected 'global'"))
+
+        res.register_advancement()
+        self.advanced()
+
+        tok_list.append(self.current_tok)
+        tok_call.append(VarAccessNode(self.current_tok))
+
+        res.register_advancement()
+        self.advanced()
+
+        while self.current_tok.type == Token.TTP_COMMA:
+            res.register_advancement()
+            self.advanced()
+
+            tok_list.append(self.current_tok)
+            tok_call.append(VarAccessNode(self.current_tok))
+
+            res.register_advancement()
+            self.advanced()
+
+        return res.success(GlobalNode(tok_list, tok_call, pos_start, self.current_tok.pos_end))
+
     def private_expr(self):
         res = ParserResult()
 
@@ -1036,6 +1121,7 @@ class Parser:
             self.current_tok.pos_start, self.current_tok.pos_end.copy(),
             f"cannot set '{self.current_tok.value}' to be private. Only supported 'var' | 'function'"
         ))
+
     def for_expr(self):
         res = ParserResult()
 
