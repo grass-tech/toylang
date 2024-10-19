@@ -1285,7 +1285,7 @@ class Interpreter:
             ESCAPE.update({"Null": value.type})
         if res.should_return(): return res
         if node.is_private is False or (node.is_private is True and father is None):
-            if var_name[:2] == "_" and var_name[-1:] == "_":
+            if var_name[:2] == "__" and var_name[-2:] == "__":
                 context.symbol_table.set_spec(var_name, value.get() if isinstance(value, Null) else value, father)
             else:
                 context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
