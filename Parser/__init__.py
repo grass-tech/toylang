@@ -93,9 +93,10 @@ class VarAccessNode:
 
 
 class VarAssignNode:
-    def __init__(self, var_name_tok, value_node):
+    def __init__(self, var_name_tok, value_node, is_private=False):
         self.var_name_tok = var_name_tok
         self.value_node = value_node
+        self.is_private = is_private
 
         self.pos_start = self.var_name_tok.pos_start
         self.pos_end = self.value_node.pos_end
@@ -187,12 +188,15 @@ class ContinueNode:
 
 # 函数节点
 class FunctionDefinedNode:
-    def __init__(self, var_name_tok, arg_name_tokens, default_args_node, body_node, should_auto_return):
+    def __init__(self,
+                 var_name_tok,
+                 arg_name_tokens, default_args_node, body_node, should_auto_return, is_private=False):
         self.var_name_tok = var_name_tok
         self.arg_name_toks = arg_name_tokens
         self.default_args_node = default_args_node
         self.body_node = body_node
         self.should_auto_return = should_auto_return
+        self.is_private = is_private
 
         if self.var_name_tok:
             self.pos_start = self.var_name_tok.pos_start
@@ -597,6 +601,11 @@ class Parser:
             return res.success(cluster_expr)
 
         # 关键字
+        # 对private的按断
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "private"):
+            private_expr = res.register(self.private_expr())
+            if res.error: return res
+            return res.success(private_expr)
         # 对if的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "if"):
             if_expr = res.register(self.if_expr())
@@ -622,7 +631,7 @@ class Parser:
 
         # 对函数的判断
         elif self.current_tok.matches(Token.TTT_KEYWORD, "function"):
-            func_def = res.register(self.func_def())
+            func_def = res.register(self.func_def(False))
             if res.error: return res
             return res.success(func_def)
 
@@ -864,8 +873,6 @@ class Parser:
                     return res.success(ArrayNode(element_nodes, start, end))
                 if isinstance(result.value, Interpreter.Cluster):
                     return res.success(ClusterNode(element_nodes, start, end))
-        if NodeType == ClusterNode and not element_nodes:
-            return res.success(None)
         return res.success(NodeType(element_nodes, pos_start, self.current_tok.pos_end.copy()))
 
     def if_expr(self):
@@ -980,6 +987,55 @@ class Parser:
 
         return res.success((cases, else_case))
 
+    def private_expr(self):
+        res = ParserResult()
+
+        if not self.current_tok.matches(Token.TTT_KEYWORD, "private"):
+            return res.failure(Error.InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                "expected 'private'"))
+
+        res.register_advancement()
+        self.advanced()
+
+        if self.current_tok.matches(Token.TTT_KEYWORD, "var"):
+            res.register_advancement()
+            self.advanced()
+
+            if self.current_tok.type != Token.TTT_IDENTIFIER:
+                return res.failure(
+                    Error.InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                        "lost variable name"
+                    ),
+                )
+            var_name = self.current_tok
+            res.register_advancement()
+            self.advanced()
+
+            if self.current_tok.type != Token.TLP_EQUAL:
+                return res.failure(
+                    Error.InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+                        "lost character '=', did you forget '='?"
+                    )
+                )
+
+            res.register_advancement()
+            self.advanced()
+            expr = res.register(self.expr())
+            if res.error: return res
+            return res.success(VarAssignNode(var_name, expr, True))
+
+        elif self.current_tok.matches(Token.TTT_KEYWORD, "function"):
+            func_def = res.register(self.func_def(True))
+            if res.error: return res
+            return res.success(func_def)
+
+        return res.failure(Error.InvalidSyntaxError(
+            self.current_tok.pos_start, self.current_tok.pos_end.copy(),
+            f"cannot set '{self.current_tok.value}' to be private. Only supported 'var' | 'function'"
+        ))
     def for_expr(self):
         res = ParserResult()
 
@@ -1191,7 +1247,7 @@ class Parser:
         return res.success(var_name)
 
     # 函数
-    def func_def(self):
+    def func_def(self, is_private):
         res = ParserResult()
 
         if not self.current_tok.matches(Token.TTT_KEYWORD, "function"):
@@ -1292,6 +1348,7 @@ class Parser:
             default_args_node,
             node_to_return,
             True,
+            is_private
         ))
 
     def call(self):

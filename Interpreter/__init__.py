@@ -1,7 +1,6 @@
 import re
 import ast
 
-import sys
 import os
 from typing import Any
 import sys
@@ -615,11 +614,23 @@ class BaseFunction(Value):
         new_context.symbol_table.set("false", false)
         new_context.symbol_table.set_spec("_moder_", String(self.name))
         for var_name, value in self.context.symbol_table.symbols.items():
+            if '->' in var_name:
+                fte = var_name.split("->")[0]
+                caller = var_name.split("->")[-1]
+                if fte == str(self.father):
+                    new_context.symbol_table.set(caller, value)
+                    continue
             if isinstance(value, Function) or isinstance(value, BuiltinFunction):
                 new_context.symbol_table.set(var_name, value)
             if self.father is not None:
                 if isinstance(value, dict) and str(var_name) == self.father[0]:
                     for dict_key, dict_value in value.items():
+                        if '->' in dict_key:
+                            fte = dict_key.split("->")[0]
+                            caller = dict_key.split("->")[-1]
+                            if fte == str(self.father):
+                                new_context.symbol_table.set(caller, value)
+                                continue
                         new_context.symbol_table.set(dict_key, dict_value)
                     continue
             if isinstance(value, dict):
@@ -895,15 +906,36 @@ class BuiltinFunction(BaseFunction):
                     self.pos_start, self.pos_end,
                     f"Can't multiple call with '{obj}'")
             )
-        return Parser.RTResult().success(
-            Array(list(exec_cft.symbol_table.symbols[obj].keys())))
+        elements = []
+        for x in list(exec_cft.symbol_table.symbols[obj].keys()):
+            if "$" in x: continue
+            elements.append(x)
+        return Parser.RTResult().success(Array(elements))
     execute_calllist.default_args_value = [None]
     execute_calllist.arg_names = ["object"]
 
     def execute_timestamp(self, exec_cft):
-        return Parser.RTResult().success(Number(__import__("time").time()))
-    execute_timestamp.default_args_value = []
-    execute_timestamp.arg_names = []
+        if exec_cft.symbol_table.get("nowtime").value == "[NOW]":
+            return Parser.RTResult().success(Number(__import__("time").time()))
+
+        try:
+            timestamp = __import__("time").mktime(
+                __import__("time").strptime(exec_cft.symbol_table.get("nowtime").value,
+                                            exec_cft.symbol_table.get("format").value))
+            return Parser.RTResult().success(Number(timestamp))
+        except ValueError:
+            return Parser.RTResult().failure(Error.InvalidValueError(
+                self.pos_start, self.pos_end,
+                f"The time {exec_cft.symbol_table.get("nowtime").value} does not match the time format"
+                f" {exec_cft.symbol_table.get("format").value}"
+            ))
+        except OverflowError:
+            return Parser.RTResult().failure(Error.RunningTimeError(
+                self.pos_start, self.pos_end,
+                "The time is out of argument range."
+            ))
+    execute_timestamp.default_args_value = [String('[NOW]'), String("%Y-%m-%d %H:%M:%S")]
+    execute_timestamp.arg_names = ['nowtime', 'format']
 
     def execute_idle(self, exec_cft):
         Idle.Idle(Token.SYNTAX, builtin).mainloop()
@@ -1045,10 +1077,12 @@ class Interpreter:
         cluster = []
 
         for cluster_node in node.cluster_nodes:
+            if cluster_node is None and len(node.cluster_nodes) == 1: break
+            if cluster_node is None: continue
             cluster.append(res.register(self.visit(cluster_node, context, father, ide_call_function_table)))
             if res.should_return(): return res
 
-        return res.success(Null())
+        return res.success(Null(list, cluster))
 
     def visit_ArrayNode(self, node, context, father, ide_call_function_table):
         res = Parser.RTResult()
@@ -1175,17 +1209,43 @@ class Interpreter:
         var_name = node.var_name_tok.value
         if father is None:
             value = context.symbol_table.get(var_name)
-            if value is None:
+            private_value = context.symbol_table.get(f"{father}->{var_name}")
+            if value is None and private_value is None:
                 return res.failure(
                     Error.DefinedError(
                         node.pos_start, node.pos_end,
-                        f"'{var_name if var_name[0] != "$" and var_name[-1] != "$" else var_name[1:-1]}' "
+                        f"'{var_name if var_name[0] != "$" else var_name[1:]}' "
                         f"is not defined")
                 )
-            if not isinstance(value, dict):
-                value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+            if value is not None:
+                if not isinstance(value, dict):
+                    value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+                else:
+                    try:
+                        value = value[var_name].copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+                    except KeyError:
+                        try:
+                            value = value[f"None->{var_name}"].copy().set_pos(
+                                node.pos_start, node.pos_end).set_context(context)
+                        except KeyError:
+                            return res.failure(
+                                Error.DefinedError(
+                                    node.pos_start, node.pos_end,
+                                    f"private objects")
+                            )
             else:
-                value = value[var_name].copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+                if not isinstance(private_value, dict):
+                    value = private_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+                else:
+                    try:
+                        value = private_value[f"None->{var_name}"].copy().set_pos(
+                            node.pos_start, node.pos_end).set_context(context)
+                    except KeyError:
+                        return res.failure(
+                            Error.DefinedError(
+                                node.pos_start, node.pos_end,
+                                f"private objects")
+                        )
         else:
             symbol = context.symbol_table.symbols
             for f in father:
@@ -1199,13 +1259,22 @@ class Interpreter:
                     )
             try:
                 value = symbol[var_name]
+                return res.success(value)
             except KeyError:
-                return res.failure(
-                    Error.DefinedError(
-                        node.pos_start, node.pos_end,
-                        f"'{var_name if var_name[0] != "$" and var_name[-1] != "$" else var_name[1:-1]}'"
-                        f" is not defined, ({' -> '.join(list(map(str, father)))})")
-                )
+                try:
+                    _ = symbol[f"None->{var_name}"]
+                    return res.failure(
+                        Error.DefinedError(
+                            node.pos_start, node.pos_end,
+                            f"private object")
+                    )
+                except KeyError:
+                    return res.failure(
+                        Error.DefinedError(
+                            node.pos_start, node.pos_end,
+                            f"'{var_name if var_name[0] != "$" else var_name[1:-1]}'"
+                            f" is not defined, ({' -> '.join(list(map(str, father)))})")
+                    )
         return res.success(value)
 
     def visit_VarAssignNode(self, node, context, father, ide_call_function_table):
@@ -1215,10 +1284,13 @@ class Interpreter:
         if isinstance(value, Null):
             ESCAPE.update({"Null": value.type})
         if res.should_return(): return res
-        if var_name[:1] == "_" and var_name[-1:] == "_":
-            context.symbol_table.set_spec(var_name, value.get() if isinstance(value, Null) else value, father)
+        if node.is_private is False or (node.is_private is True and father is None):
+            if var_name[:2] == "_" and var_name[-1:] == "_":
+                context.symbol_table.set_spec(var_name, value.get() if isinstance(value, Null) else value, father)
+            else:
+                context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
         else:
-            context.symbol_table.set(var_name, value.get() if isinstance(value, Null) else value, father)
+            context.symbol_table.set(f"None->{var_name}", value.get() if isinstance(value, Null) else value, father)
         return res.success(
             Null(
                 ESCAPE[str(type(value).__name__)],
@@ -1283,7 +1355,6 @@ class Interpreter:
             context.symbol_table.set(node.var_name_tok.value, Number(i), father)
             i += int(step_value.value)
 
-            if node.body_node is None: break
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
                 res.loop_should_break is False and res.loop_should_continue is False: return res
@@ -1310,7 +1381,6 @@ class Interpreter:
         for item in foriter:
             context.symbol_table.set(node.var_name_tok.value, item, father)
 
-            if node.body_node is None: break
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
                 res.loop_should_break is False and res.loop_should_continue is False: return res
@@ -1334,7 +1404,7 @@ class Interpreter:
             elif node.type == "meet" and not condition.is_true():
                 break
 
-            if node.body_node is None: break
+            if len(node.cluster_nodes) == 1: break
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
                 res.loop_should_break is False and res.loop_should_continue is False: return res
@@ -1369,11 +1439,14 @@ class Interpreter:
                 self.visit(default_arg_node, context, father, ide_call_function_table)))
             if res.should_return(): return res
         func_value = Function(
-            func_name, body_node, arg_names, default_arg_value, node.should_auto_return, father
+            func_name, body_node, arg_names, default_arg_value,
+            node.should_auto_return, father
         ).set_context(context).set_pos(node.pos_start, node.pos_end)
 
-        if node.var_name_tok:
+        if node.var_name_tok and (node.is_private is False or (node.is_private is True and father is None)):
             context.symbol_table.set(func_name, func_value, father)
+        elif node.is_private is True:
+            context.symbol_table.set(f"None->{func_name}", func_value, father)
         return res.success(Null())
 
     def visit_CallFunctionNode(self, node, context, father, ide_call_function_table):

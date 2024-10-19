@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Error
 
-punctuation = "!@#$%^&;:<>,.?\\|`~([{" + string.whitespace
+punctuation = "@#$%;:<>\\`([{" + string.whitespace
 
 # 类型(Token Type)
 # Basic
@@ -126,6 +126,8 @@ PREVIEW_LOGIC = {
     "%": TCP_MOD,
 }
 SYNTAX = [
+    "private",
+
     "var",
     "delete",
 
@@ -230,7 +232,7 @@ class Lexer:
                 if "null" not in t:
                     tokens.extend(t)
             # 制作数字(make number)
-            elif self._current_char in string.digits:
+            elif self._current_char in string.digits + ".":
                 self._err, t = self._make_number()
                 tokens.append(t)
             # 制作标识符
@@ -307,25 +309,24 @@ class Lexer:
         char = ""
         dot_count = 0
         pos_start = self._pos.copy()
-        is_base: bool | str = False
+        is_base = False
         base_string = string.digits + '.bxo'
-        while self._current_char is not None and \
-                self._current_char in base_string:
+        while self._current_char is not None and self._current_char in base_string:
             if self._current_char == ".":
                 dot_count += 1
-            elif self._current_char == "x":
+            elif self._current_char == "x" and char[-1] == "0" and len(char) == 1:
                 char = char[1:]
                 is_base = TTT_HEX
                 base_string = string.hexdigits
                 self._advanced()
                 continue
-            elif self._current_char == "b":
+            elif self._current_char == "b" and char[-1] == "0" and len(char) == 1:
                 char = char[1:]
                 is_base = TTT_BIN
                 base_string = "10"
                 self._advanced()
                 continue
-            elif self._current_char == "o":
+            elif self._current_char == "o" and char[-1] == "0" and len(char) == 1:
                 char = char[1:]
                 is_base = TTT_OCT
                 base_string = string.octdigits
@@ -351,7 +352,13 @@ class Lexer:
         elif is_base == TTT_HEX:
             return [None, Token(TTT_HEX, char, pos_start, self._pos)]
         else:
-            return [None, Token(TTT_INT, int(char), pos_start, self._pos)]
+            try:
+                return [None, Token(TTT_INT, int(char), pos_start, self._pos)]
+            except ValueError:
+                return [Error.InvalidValueError(
+                    pos_start, self._pos.copy(),
+                    "invalid base value"
+                ), None]
 
     def _make_identifier(self):
         char = ""

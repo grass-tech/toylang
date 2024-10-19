@@ -75,7 +75,41 @@ AttributeCall Type: Underline + IDENTIFIER + Underline, like this structure
 
 ===== KEYWORDS INTRODUCTION =====
 
+Table : [
+    "private",
+
+    "var",
+    "delete",
+
+    "if",
+    "elseif",
+    "else",
+
+    "foriter",
+    "by",
+
+    "for",
+    "from",
+    "to",
+    "step",
+
+    "repeat",
+    "until",
+    "meet",
+
+    "break",
+    "continue",
+
+    "function",
+    "return",
+
+    "include"
+]
+
 # KEYWORDS [
+    // define private for definable objects
+    private <Keywords> <Expression*>
+
     // define the variable by 'var'
     var <IDENTIFIER> = <Expression*>
 
@@ -208,4 +242,3 @@ function fibonacci(n=20) {
 println(fibonacci(int(readline('Type a number: '))))
 
 ```
-
