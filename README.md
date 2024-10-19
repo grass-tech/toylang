@@ -26,21 +26,22 @@ A python simple programming language，一个简单的python编程语言
 
 ## 语法 Grammar
 
-|   关键字    | 用法                                                                                             |   用途   |
-|:--------:|:-----------------------------------------------------------------------------------------------|:------:|
-|   var    | \<Variable> \= \<Expression*>                                                                  |  设置变量  |
-|    if    | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |   如果   |
-|  elseif  | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |  否则如果  |
-|   else   | {\<CodesCluster>}                                                                              |   否则   |
-|   for    | \<Variable> from \<Expression*> to \<Expression*> (step \<Expression* -> 1>) {\<CodesCluster>} |  次数循环  |
-| foriter  | \<Variable> by (\<Variable> \| \[Array])                                                       |  迭代循环  |
-|  repeat  | (meet \| until)  \<Expression*> {\<CodesCluster>}                                              |  条件循环  |
-| function | \<FunctionName> {\<CodesCluster>}                                                              |  构建函数  |
-|  delete  | \<Variable>                                                                                    |  删除变量  |
-|  return  | \<Expression*>                                                                                 |  函数返回  |
-|  break   | NULL                                                                                           |  跳出循环  |
-| continue | NULL                                                                                           | 跳出本次循环 |
-| include  | \<Library> \| \<Module>                                                                        | 导入库或模块 |
+|   关键字    | 用法                                                                                             |                     用途                     |
+|:--------:|:-----------------------------------------------------------------------------------------------|:------------------------------------------:|
+| private  | \<PrivatbleKeyWords> \<Expression*>                                                            |          数据私有化 Data to be private          |
+|   var    | \<Variable> \= \<Expression*>                                                                  |           设置变量 Defined Variable            |
+|    if    | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |                 如果     if                  |
+|  elseif  | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |                 否则如果 then                  |
+|   else   | {\<CodesCluster>}                                                                              |                 否则    else                 |
+|   for    | \<Variable> from \<Expression*> to \<Expression*> (step \<Expression* -> 1>) {\<CodesCluster>} |             次数循环 repeat times              |
+| foriter  | \<Variable> by (\<Variable> \| \[Array])                                                       |        迭代循环      iterate repeating         |
+|  repeat  | (meet \| until)  \<Expression*> {\<CodesCluster>}                                              |         条件循环     condition repeat          |
+| function | \<FunctionName> {\<CodesCluster>}                                                              |          构建函数     build function           |
+|  delete  | \<Variable>                                                                                    |           删除变量   delete variable           |
+|  return  | \<Expression*>                                                                                 |         函数返回 Function return value         |
+| include  | \<Library> \| \<Module>                                                                        |   导入库或模块      import library or modules    |
+|  break   | NULL                                                                                           |   跳出循环           jump out from repeating   |
+| continue | NULL                                                                                           | 跳出本次循环          jump once out of repeating |
 
 |   内置函数    |           用法            |      用途      |
 |:---------:|:-----------------------:|:------------:|
@@ -51,11 +52,14 @@ A python simple programming language，一个简单的python编程语言
 |  boolean  |      <Condition*>       |   将值转换为布尔值   |
 |   array   | <Expression*> -> String |   将值转换为数组    |
 |  length   | <Expression*> -> String |     获取长度     |
-|    run    |    \<File> -> String    |   运行tl源文件    |
 | timestamp |          Null           |  获取当前时间的时间戳  |
 | calllist  |    \<Object> -> Any     | 获取对象所有可调用的列表 |
 |   idle    |          Null           |    打开IDLE    |
+|    run    |    \<File> -> String    |   运行tl源文件    |
 
+- PrivatableKeyWords : 可私有化关键字 private keyword
+    - var 定义变量 or define variable
+    - function 构建函数 or build function
 - Variable : 变量名 variable name
 - Condition : 条件表达式 condition expr
 - Expression : 普通表达式 normal expr
@@ -67,16 +71,20 @@ A python simple programming language，一个简单的python编程语言
 - (.*?) -> (.*?) : 表示默认值 default value
 - | ： 表示"或"  'or'
 
-【\*】 IDLE new add `idle_call_funciton_table` variable, this need upload a dict, dict's key is called builtin function name, value is called execute function
+---
+
+【\*】 IDLE new add `idle_call_funciton_table` variable, this need upload a dict, dict's key is called builtin function
+name, value is called execute function
 
 【\*】 IDLE 新增`idle_call_function_table`的变量，该变量需传入一个字典；字典的键为调用的内置函数的名字，值为所对应的调用的执行函数
+
+---
 
 Default: {'println': print, 'readline': input}
 
 默认：{'println': print, 'readline': input}
 
-IDLE: {'println': self.println, 'readline': self.readline}
-
+*IDLE*: {'println': self.println, 'readline': self.readline}
 
 ### 如何隔开代码簇 How to split cluster
 
@@ -163,7 +171,7 @@ test(1);
 用法 Useage
 
 ```txt
-var _<Variable>_ = <Expression*>
+var __<Variable>__ = <Expression*>
  ^       ^
  |       |
 变量 开头末尾有"_"的变量
@@ -172,15 +180,14 @@ var _<Variable>_ = <Expression*>
 示例 Example
 
 ```js
-var _test_ = '123'
+var __test__ = '123'
 ```
 
 调用 Call
 
 ```
-$_test_
+$__test__
 ```
-
 
 ## 代码示例 Code Example
 
