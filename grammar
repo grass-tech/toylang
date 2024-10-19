@@ -66,6 +66,17 @@ AttributeCall Type: Underline + IDENTIFIER + Underline, like this structure
                     Call this variable: last Underline add GETTER (Eq: $) and first too
                     $_example_$, $_hello_$, $_toy_$, $_lang_$ both Call This Variable
 
+===== BITWISE INTRODUCTION =====
+
+Bitwise Operator : [
+    AND : &
+    OR : |
+    XOR : ^
+    NOT : ~
+    LEFT MOVEMENT : <<
+    RIGHT MOVEMENT : >>
+]
+
 ===== COMPUTING ORDER INTRODUCTION =====
 
 (MINUS | PLUS) : Lowest Role                    -> arith
@@ -76,6 +87,7 @@ AttributeCall Type: Underline + IDENTIFIER + Underline, like this structure
 ===== KEYWORDS INTRODUCTION =====
 
 Table : [
+    "global",
     "private",
 
     "var",
@@ -107,6 +119,9 @@ Table : [
 ]
 
 # KEYWORDS [
+    // redefine variable globally
+    global <Variable>
+    
     // define private for definable objects
     private <Keywords> <Expression*>
 
@@ -203,25 +218,18 @@ true      -> 1
 false     -> 0
 null      -> 0
 
-// If need call variable below, need use GETTER type (Eq: $) after it and before it
-// e.g. $_moder_$
-// e.g. $_caller_$
-
-// Get the mode when running
-_moder_   -> _this_ | <FileName>
-
-// Get the caller when running or importing
-_caller_  -> _self_ | _<Headers>_
-
 ===== SELF-OPTION INTRODUCTION =====
 
 Subscripts : <Subscriptable>[<Expression*>]     -> `[]` after <Subscriptable> means subscripts
 Terminator : <IDENTIFIER> ? true : false        -> if <IDENTIFIER> is true then choose left value
 Nick-Variable : <IDENTIFIER1> -> <IDENTIFIER2>  -> This way can copy attribute to the IDENTIFIER2
                                                    if IDENTIFIER1's value changed, IDENTIFIER2 will change, too
-
-
-
+Hiden-Variable : $__<Variable>__                -> Cannot access this variable by normal way like type
+                                                   variable directly.
+                                                   
+                                                   If need call variable below, 
+                                                   need use GETTER type (Eq: $) before it
+                                                   e.g. $__moder__
 
 
 ===== EXAMPLE CODES =====
