@@ -28,6 +28,7 @@ A python simple programming language，一个简单的python编程语言
 
 |   关键字    | 用法                                                                                             |                     用途                     |
 |:--------:|:-----------------------------------------------------------------------------------------------|:------------------------------------------:|
+|  global  | \<Variable>                                                                                    |          声明一个全局变量 Global variable          |
 | private  | \<PrivatbleKeyWords> \<Expression*>                                                            |          数据私有化 Data to be private          |
 |   var    | \<Variable> \= \<Expression*>                                                                  |           设置变量 Defined Variable            |
 |    if    | (\<Condition*> \| \<Expression*>) {\<CodesCluster>}                                            |                 如果     if                  |
@@ -43,20 +44,22 @@ A python simple programming language，一个简单的python编程语言
 |  break   | NULL                                                                                           |   跳出循环           jump out from repeating   |
 | continue | NULL                                                                                           | 跳出本次循环          jump once out of repeating |
 
-|   内置函数    |           用法            |      用途      |
-|:---------:|:-----------------------:|:------------:|
-|  println  |  <Expression*> -> Any   |   输出信息到控制台   |
-| readline  | <Expression*> -> String |    读取用户输入    |
-|    int    |  <Expression*> -> INT   |   将值转换为整型    |
-|  string   |  <Expression*> -> Any   |   将值转换为字符串   |
-|  boolean  |      <Condition*>       |   将值转换为布尔值   |
-|   array   | <Expression*> -> String |   将值转换为数组    |
-|  length   | <Expression*> -> String |     获取长度     |
-| timestamp |          Null           |  获取当前时间的时间戳  |
-| calllist  |    \<Object> -> Any     | 获取对象所有可调用的列表 |
-|   idle    |          Null           |    打开IDLE    |
-|    run    |    \<File> -> String    |   运行tl源文件    |
+|   内置函数    |                             用法                             |      用途      |
+|:---------:|:----------------------------------------------------------:|:------------:|
+|  println  |                    <Expression*> -> Any                    |   输出信息到控制台   |
+| readline  |                  <Expression*> -> String                   |    读取用户输入    |
+|    int    |                    <Expression*> -> INT                    |   将值转换为整型    |
+|  string   |                    <Expression*> -> Any                    |   将值转换为字符串   |
+|  boolean  |                        <Condition*>                        |   将值转换为布尔值   |
+|   array   |                  <Expression*> -> String                   |   将值转换为数组    |
+|  length   |                  <Expression*> -> String                   |     获取长度     |
+| timestamp | (Null \| [\<Time>, (\<TimeFormat> = "%Y-%m-%d %H:M%:%S")]) |  获取当前时间的时间戳  |
+| calllist  |                      \<Object> -> Any                      | 获取对象所有可调用的列表 |
+|   idle    |                            Null                            |    打开IDLE    |
+|    run    |                     \<File> -> String                      |   运行tl源文件    |
 
+- Time : 时间
+- TimeFormat : 时间格式 time format
 - PrivatableKeyWords : 可私有化关键字 private keyword
     - var 定义变量 or define variable
     - function 构建函数 or build function
@@ -86,7 +89,7 @@ Default: {'println': print, 'readline': input}
 
 *IDLE*: {'println': self.println, 'readline': self.readline}
 
-### 如何隔开代码簇 How to split cluster
+## 如何隔开代码簇 How to split cluster
 
 **使用 *分号* 隔开代码簇的各个代码**
 
@@ -189,145 +192,254 @@ var __test__ = '123'
 $__test__
 ```
 
-## 代码示例 Code Example
+## 内置库 Builtin Libraries
 
-- **奇偶数判断**
+### 随机数 random
 
-  Shell
+> 采用梅森旋转算法生成伪随机数
 
-  ```shell
-  > function isEven(number) {if number % 2 == 0 {println('是偶数')} else {println('非偶数')}}
-  > isEven(20)
-  是偶数
-  > isEven(19)
-  非偶数
-  ```
+> Use Mersenne Twister Algorithm to generate pseudo random number
 
-  File
+```js
+/* random generator by Mersenne Twister Arguments */
 
-  ```js
-  function isEven(number) {
-    if number % 2 == 0 {
-      println('是偶数')
-    } else {
-      println('是奇数')
+var N = 624
+var M = 397
+var MATRIX_A = 0x9908B0DF
+var UPPER_MASK = 0x80000000
+var LOWER_MASK = 0x7FFFFFFF
+
+var state = [0] * N
+var index = N + 1
+
+/* private twist function */
+private function twist() {
+    global state
+    global index
+    for i from 0 to N - 1 {
+        var x = (state[i] & UPPER_MASK) + (state[(i + 1) % N] & LOWER_MASK)
+        var xA = x >> 1;
+        if (x % 2 == 1) {
+            var xA = xA ^ MATRIX_A;
+        }
+        var state[i] = state[(i + M) % N] ^ xA;
     }
-  }
+    var index = 0;
+}
 
-  println(isEven(19))
-  println(isEven(20))
-  ```
-
-- **迭代奇偶数判断**
-
-  Shell
-
-  ```js
-  > var maximum = int(readline('Type maximum number: '))
-  > for i from 1 to maximum {if i % 2 == 0 {println(string(i) + " 是偶数")} else {println(string(i) + " 是奇数")}}
-  ```
-
-  File
-
-  ```js
-  var maximum = int(readline('Type maximum number: '))
-  for i from 1 to maximum {
-    if i % 2 == 0 {
-      println(string(i) + " 是偶数")
-    } else {
-      println(string(i) + " 是奇数")
+/* seed generator */
+function seed(seed_value=0) {
+    if seed_value == null {
+        var seed_value = int(timestamp(), true)
     }
-  }
-  ```
+    global state
+    global index
+    var state[0] = seed_value;
+    for i from 1 to N - 1 {
+        var state[i] = (1812433253 * (state[i - 1] ^ (state[i - 1] >> 30)) + i) & 0xFFFFFFFF
+    }
+    var index = N
+}
 
-- **输出偶数**
+/* relay random generator */
+function retrack() {
+    global state
+    global index
+    seed()
 
-  Shell
+    if index >= N {
+        twist()
+    }
+    var y = state[index]
+    var y = y ^  ((y >> 11) & 0xFFFFFFFF)
+    var y = y ^ ((y << 7) & 0x9D2C5680)
+    var y = y ^ ((y << 15) & 0xEFC60000)
+    var y = y ^ (y >> 18)
+    var index = index + 1
+    return y & 0xFFFFFFFF
+}
 
-  ```js
-  > var minimum = int(readline('Type minimum number: '))
-  > var maximum = int(readline('Type maximum number: '))
-  > if minimum % 2 == 0 {for i from minimum to maximum step 2 {println(i)}} else {println(string(minimum) + " 非偶数，请输入一个偶数")}
-  ```
+/* choose a random in range */
+function rand(min, max) {
+    var range = max - min + 1
+    return (retrack() % range) + min
+}
+```
 
-  File
+- random.seed() 随机数种子 random seed
+- random.retrack() 重置随机数 reset
+- random.rand(x, y) 随机数生成(范围) random generator (range)
 
-  ```js
-  var minimum = int(readline('Type minimum number: '))
-  var maximum = int(readline('Type maximum number: '))
-  if minimum % 2 == 0 {
-    for i from minimum to maximum step 2 {
-      println(i)
-    } 
-  } else {
-    println(string(minimum) + " 非偶数，请输入一个偶数")
-  }
-  ```
+### 单元库 Utils
 
-- **斐波那契数列**
+> 封装一些常用函数
 
-  Shell
+> Wrap some common functions
 
-  ```js
-  > function fib(n) {function fn(i) {if i < 2 {return 1} else {return fn(i - 2) + fn(i - 1)}};for x from 0 to n {println(fn(x))}}
-  > fib(int(readline('type maximum fibonachi: ')))
-  ```
+```js
+/* Multiple Function Package File 多函数包文件 */
 
-  File
+/* fibonacci with factorial 递归斐波那契数列 */
+function factorial_fib(n=10) {
+    var result = [];
+    function factor(i) {
+        if i < 2 {
+            return 1;
+        } else {
+            return factor(i - 2) + factor(i - 1);
+        }
+    }
 
-  ```js
-  function fib(n) {
-    function fn(i) {
-      if i < 2 {
-        return 1
-      } else {
-        return fn(i - 2) + fn(i - 1)
-      }
-    };
     for x from 0 to n {
-      println(fn(x))
+        var result = result + factor(x);
     }
-  }
-  
-  fib(int(readline('type maximum fibonachi: ')))
-  ```
+    return result
+}
 
-- **累加器**
-
-  Shell
-
-  ```js
-  var start = int(readline('Type start number: '))
-  var end = int(readline('Type end number: '))
-  var counter = 0
-  repeat until start == end {
-    var counter = counter + 1;
-    var start = start   + 1
-  }
-  println('从' + string(end - counter) + '加到' + string(end) + '需要加' +   string(counter) + '次')
-  ```
-
-  File
-
-  ```js
-  var start = int(readline('Type start number: '))
-  var end = int(readline('Type end number: '))
-  var counter = 0
-  repeat until start == end {
-    var counter = counter + 1;
-    var start = start + 1
-  }
-  println('从' + string(end - counter) + '加到' + string(end) + '需要加' +   string(counter) + '次')
-  ```
-
-- **正确数据校验**
-
-  ```js
-  repeat meet true {
-    var data = readline('Type a data: ');
-      meet data == 'exit' {
-      println('正确数据');
-      var data = ''
+/* fibonacci with Repeat 循环斐波那契数列 */
+function repeat_fib(n=20) {
+    var result = [];
+    for i from 0 to n {
+        if i <= 1 {
+            var result = result + [1];
+        } else {
+            var result = result + (result[i-2] + result[i-1]);
+        }
     }
-  }
-  ```
+    return result;
+}
+
+/* mapping function */
+function map(func, ld) {
+    var result = [];
+    for x from 0 to length(ld) - 1 {
+        var result = result + func(ld[x]);
+    }
+    return result;
+}
+
+/* access array element(s) */
+function access(ld, i) {
+    return ld[i];
+}
+
+/* Compute Running Time */
+function timer(func) {
+    var starttime = timestamp();
+    func();
+    return timestamp() - starttime;
+}
+```
+
+- factorial_fib(n=10) 递归斐波那契数列 factorial fibonacci
+- repeat_fib(n=20) 循环斐波那契数列 repeat fibonacci
+- map(func, ld) 映射函数 map function
+- access(ld, i) 访问数组元素 access array element
+- timer(func) 计算运行时间 compute running time
+
+### 非标准数学库 Non-Standard Math
+
+> 封装一些数学函数，注意：此数学库为  **非标准** 数学库，不支持所有数学函数，仅支持部分数学函数且计算可能不正确
+
+> Wrap some math functions, note: This math library is **non-standard** math library, does not support all math
+> functions, only supports some math functions and the calculation may be incorrect.
+
+```js
+/* non-Standard Math Libray */
+
+/* Some normal constants */
+var pi = 3.141592653589793
+var e = 2.718281828459045
+var tau = 6.283185307179586
+
+/* Power */
+function pow(n, p) {
+    return n ** p;
+}
+
+/* Absolute value */
+function abs(n) {
+    if n < 0 {
+        return -n;
+    } else {
+        return n;
+    }
+}
+
+/* factorial */
+function factorial(n) {
+    var result = 1;
+    for x from 1 to n {
+        var result = result * x;
+    }
+    return result;
+}
+
+/* Special factorial to compute trigonometric functions */
+private function _factorial(n) {
+    if n == 0 or n == 1 {
+        return 1;
+    }
+    var result = 1;
+    for x from 2 to n {
+        var result = result * x;
+    }
+    return result
+}
+
+/* Square root */
+function sqrt(n) {
+    return n ** 0.5;
+}
+
+/* Trigonometric 'cos' by Taylor series */
+function cos(n, terms = 10) {
+    var result = 0;
+    for x from 0 to terms - 1 {
+        var term = ((-1) ** x) * (n ** (2 * x)) / _factorial(2 * x);
+        var result = result + term;
+    }
+    return result;
+}
+
+/* Trigonometric 'sin' by Taylor series */
+function sin(n, terms = 10) {
+    var result = 0;
+    for x from 0 to terms - 1 {
+        var term = ((-1) ** x) * (n ** (2 * x + 1)) / _factorial(2 * x + 1);
+        var result = result + term;
+    }
+    return result;
+}
+
+/* Test each math function 'test' */
+function test() {
+    var result = [];
+    var result = result + pow(2, 2);
+    var result = result + factorial(5);
+    var result = result + abs(5);
+    var result = result + abs(-5)
+    println(['math.pow(2, 2)', 'math.factorial(5)', 'math.abs(5)', 'math.abs(-5)']);
+    println(result)
+    var result = [];
+    var result = result + cos(pi / 2);
+    var result = result + sin(pi / 2);
+    println(['math.cos(pi / 2)', 'math.sin(pi / 2)']);
+    println(result)
+
+    println('Function end successfully')
+
+    return null;
+}
+```
+
+- pow(n, p) 幂运算 pow
+- abs(n) 绝对值 abs
+- factorial(n) 阶乘 factorial
+- sqrt(n) 平方根 sqrt
+- cos(n, terms = 10) 余弦 cos
+- sin(n, terms = 10) 正弦 sin
+
+---
+
+- test() 测试函数 test
