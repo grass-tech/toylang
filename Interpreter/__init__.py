@@ -879,10 +879,11 @@ class BuiltinFunction(BaseFunction):
         try:
             if isinstance(exec_cft.symbol_table.get('decimal'), Number):
                 if exec_cft.symbol_table.get('decimal').value == 0:
-                    return Parser.RTResult().success(Number(int(str(exec_cft.symbol_table.get('decimal')))))
+                    return Parser.RTResult().success(Number(int(str(exec_cft.symbol_table.get('value')))))
                 else:
-                    return Parser.RTResult().success(Number(int(
-                        round(float(str(exec_cft.symbol_table.get('value'))), 0))))
+                    return Parser.RTResult().success(Number(
+                        round(float(str(exec_cft.symbol_table.get('value'))),
+                              int(str(exec_cft.symbol_table.get('decimal'))))))
 
         except (ValueError, SyntaxError):
             return Parser.RTResult().failure(
@@ -1022,10 +1023,10 @@ class BuiltinFunction(BaseFunction):
 println = BuiltinFunction.println = BuiltinFunction("println", None)
 readline = BuiltinFunction.readline = BuiltinFunction("readline", None)
 len_ = BuiltinFunction.len = BuiltinFunction("len", None)
-int_ = BuiltinFunction.int = BuiltinFunction("int", None)
-str_ = BuiltinFunction.str = BuiltinFunction("str", None)
-float_ = BuiltinFunction.float = BuiltinFunction("float", None)
-bool_ = BuiltinFunction.bool = BuiltinFunction("bool", None)
+int_ = BuiltinFunction.int_ = BuiltinFunction("int", None)
+str_ = BuiltinFunction.str_ = BuiltinFunction("str", None)
+float_ = BuiltinFunction.float_ = BuiltinFunction("float", None)
+bool_ = BuiltinFunction.bool_ = BuiltinFunction("bool", None)
 array = BuiltinFunction.array = BuiltinFunction("array", None)
 run_ = BuiltinFunction.run_ = BuiltinFunction("run", None)
 calllist = BuiltinFunction.calllist = BuiltinFunction("calllist", None)
@@ -1578,7 +1579,6 @@ class Interpreter:
             elif node.type == "meet" and not condition.is_true():
                 break
 
-            if len(node.cluster_nodes) == 1: break
             res.register(self.visit(node.body_node, context, father, ide_call_function_table))
             if res.should_return() and \
                     res.loop_should_break is False and res.loop_should_continue is False: return res
