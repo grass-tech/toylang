@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Interpreter
 
 
-class RunUI(tk.Tk):
+class RunUI(tk.Toplevel):
     def __init__(self, father, x, y, ox, is_selection=False):
         super().__init__()
         __version__ = f"""ToyLang 1.1.5 Interpreter on {platform.system()} at {time.strftime('%H:%M:%S')} running
@@ -44,6 +44,7 @@ class RunUI(tk.Tk):
         self.content_bar.pack(padx=5, fill=tk.BOTH, expand=True)
 
         threading.Thread(target=self.run, args=(is_selection, father), daemon=True).start()
+
 
     def println(self, rs, end):
         self.content_bar.insert(tk.END, str(rs) + str(end), 'output')

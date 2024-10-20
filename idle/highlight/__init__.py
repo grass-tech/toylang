@@ -91,5 +91,8 @@ def highlight(text_widget, syntaxes: list, function, settings: dict):
 
     _regex_search(text_widget, r'-?\d+', text_widget.get("1.0", "end"), "number")
     _regex_search(text_widget, r'-?\d+\.\d+', text_widget.get("1.0", "end"), "number")
+    _regex_search(text_widget, r'0b[01]+', text_widget.get("1.0", "end"), "number")
+    _regex_search(text_widget, r'0o[0-7]+', text_widget.get("1.0", "end"), "number")
+    _regex_search(text_widget, r'0x[0-9A-Fa-f]+', text_widget.get("1.0", "end"), "number")
     _regex_search(text_widget, r"'[^']*'" + r"|\"[^\"]*\"", text_widget.get("1.0", "end"), "string")
     _regex_search(text_widget, r'/\*.*?\*/', text_widget.get("1.0", "end"), "comment")

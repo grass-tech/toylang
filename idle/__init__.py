@@ -1,10 +1,10 @@
-import threading
 import tkinter as tk
 import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 import re
 import json
+import threading
 
 import sys
 import os
@@ -93,6 +93,7 @@ class IdleFunction:
                         run_ui.pop(run_ui.index(ru))
                     except ValueError:
                         pass
+        run_ui.clear()
         run_ui.append(runner.RunUI(
             self.idle,
             self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width()))
@@ -104,15 +105,16 @@ class IdleFunction:
             if ru is not None:
                 try:
                     ru.destroy()
-                    run_ui.remove(ru)
+                    run_ui.pop(run_ui.index(ru))
                 except (AttributeError, RuntimeError):
                     try:
                         run_ui.pop(run_ui.index(ru))
                     except ValueError:
                         pass
+        run_ui.clear()
         run_ui.append(runner.RunUI(
             self.idle,
-            self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width(), True))
+            self.idle.winfo_x(), self.idle.winfo_y(), self.idle.winfo_width()))
         run_ui[-1].mainloop()
 
 
@@ -207,6 +209,8 @@ class Idle(tk.Tk):
         self.content_bar.bind("<Return>", IdleFunction(self).auto_indent)
         threading.Thread(target=self.update_highlight).start()
         self.content_bar.bind("<KeyRelease>", self._collect)
+
+        self.mainloop()
 
     @staticmethod
     def _combine_function(*funcs):

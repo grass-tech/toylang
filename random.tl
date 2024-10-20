@@ -1,4 +1,4 @@
-/* random generator by Mersenne Twister Arguments */
+/* random generator by Mersenne Twister Algorithm */
 
 var N = 624
 var M = 397
@@ -9,10 +9,8 @@ var LOWER_MASK = 0x7FFFFFFF
 var state = [0] * N
 var index = N + 1
 
-/* private twist function */
+/* private twist function (Computing Core) */
 private function twist() {
-    global state
-    global index
     for i from 0 to N - 1 {
         var x = (state[i] & UPPER_MASK) + (state[(i + 1) % N] & LOWER_MASK)
         var xA = x >> 1;
@@ -25,23 +23,19 @@ private function twist() {
 }
 
 /* seed generator */
-function seed(seed_value=0) {
+private function seed(seed_value=0) {
     if seed_value == null {
         var seed_value = int(timestamp(), true)
     }
-    global state
-    global index
     var state[0] = seed_value;
     for i from 1 to N - 1 {
         var state[i] = (1812433253 * (state[i - 1] ^ (state[i - 1] >> 30)) + i) & 0xFFFFFFFF
     }
-    var index = N
+    var index = 0
 }
 
 /* relay random generator */
-function retrack() {
-    global state
-    global index
+private function retrack() {
     seed()
 
     if index >= N {
@@ -56,9 +50,15 @@ function retrack() {
     return y & 0xFFFFFFFF
 }
 
+/* decimal random generator in range */
+function uniform(a, b) {
+    global state, index
+    return a + (b - a) * (retrack() / 4294967295.0);
+}
+
 /* choose a random in range */
 function rand(min, max) {
+    global state, index
     var range = max - min + 1
     return (retrack() % range) + min
 }
-

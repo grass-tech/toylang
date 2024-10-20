@@ -47,7 +47,7 @@ def save_preference(self, config):
     self.destroy()
 
 
-class Configure(tk.Tk):
+class Configure(tk.Toplevel):
     def __init__(self, x, y, config, syntaxes=None, function=None):
         super().__init__()
         self.config = config

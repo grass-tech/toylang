@@ -25,7 +25,6 @@
 || : OR
 
 ^ : XOR
-~ : REVERSE
 & : AND_MOVEMENT
 | : OR_MOVEMENT
 << : LEFT_MOVEMENT
@@ -121,7 +120,7 @@ Table : [
 # KEYWORDS [
     // redefine variable globally
     global <Variable>
-    
+
     // define private for definable objects
     private <Keywords> <Expression*>
 
@@ -226,8 +225,8 @@ Nick-Variable : <IDENTIFIER1> -> <IDENTIFIER2>  -> This way can copy attribute t
                                                    if IDENTIFIER1's value changed, IDENTIFIER2 will change, too
 Hiden-Variable : $__<Variable>__                -> Cannot access this variable by normal way like type
                                                    variable directly.
-                                                   
-                                                   If need call variable below, 
+
+                                                   If need call variable below,
                                                    need use GETTER type (Eq: $) before it
                                                    e.g. $__moder__
 

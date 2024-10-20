@@ -640,7 +640,10 @@ class BaseFunction(Value):
                 new_context.symbol_table.set(var_name, value)
 
         new_context = Context(self.name, self.context, self.pos_start)
-        new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
+        try:
+            new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
+        except AttributeError:
+            return None
 
         # 往局部变量添加特定变量
         new_context.symbol_table.set("null", null)
@@ -728,6 +731,9 @@ class Function(BaseFunction):
         interpreter = Interpreter()
 
         exec_ctf = self.generate_new_context()
+        if exec_ctf is None: return res.failure(
+            Error.RunningTimeError(
+                self.body_node.pos_start, self.body_node.pos_end, f"Function '{self.name}' end quickly"))
         res.register(self.check_and_populate_args(self.arg_names, self.default_args_value, args, exec_ctf))
         if res.should_return(): return res
 
@@ -783,6 +789,9 @@ class BuiltinFunction(BaseFunction):
     def execute(self, args):
         res = Parser.RTResult()
         exec_cft = self.generate_new_context()
+        if exec_cft is None: return res.failure(
+            Error.RunningTimeError(
+                self.pos_start, self.pos_end, f"Function '{self.name}' end quickly"))
 
         method_name = f"execute_{self.name}"
         method = getattr(self, method_name, self.no_visit_method)
@@ -947,7 +956,7 @@ class BuiltinFunction(BaseFunction):
             )
         elements = []
         for x in list(exec_cft.symbol_table.symbols[obj].keys()):
-            if "$" in x: continue
+            if '$' in x or '&' in x or '#' in x: continue
             elements.append(x)
         return Parser.RTResult().success(Array(elements))
 
@@ -979,7 +988,7 @@ class BuiltinFunction(BaseFunction):
     execute_timestamp.arg_names = ['nowtime', 'format']
 
     def execute_idle(self, exec_cft):
-        Idle.Idle(Token.SYNTAX, builtin).mainloop()
+        Idle.Idle(Token.SYNTAX, builtin)
         return Parser.RTResult().success(Null())
 
     execute_idle.default_args_value = []
@@ -1300,9 +1309,9 @@ class Interpreter:
                                 context))
                     except KeyError:
                         return res.failure(
-                            Error.DefinedError(
+                            Error.RunningTimeError(
                                 node.pos_start, node.pos_end,
-                                f"private objects"
+                                f"Private object '{var_name}' is cannot be accessed"
                             )
                         )
 
@@ -1338,14 +1347,14 @@ class Interpreter:
                 value = res.success(symbol[var_name])
             except* KeyError:
                 try:
-                    value = res.success(global_symbol_table.get(f"@{var_name}"))
+                    value = res.success(global_symbol_table.symbols[f"@{var_name}"])
                 except* KeyError:
                     try:
                         _ = symbol[f"#{var_name}"]
                         value = res.failure(
-                            Error.DefinedError(
+                            Error.RunningTimeError(
                                 node.pos_start, node.pos_end,
-                                f"private object"
+                                f"Private object '{var_name}' is cannot be accessed"
                             )
                         )
                     except* KeyError:
@@ -1621,7 +1630,6 @@ class Interpreter:
         value_to_call = res.register(self.visit(node.node_to_call, context, father, ide_call_function_table))
         if res.should_return(): return res
         value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
-
         for arg_node in node.arg_nodes:
             args.append(res.register(self.visit(arg_node, context, None, ide_call_function_table)))
             if res.should_return(): return res

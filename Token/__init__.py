@@ -128,32 +128,24 @@ PREVIEW_LOGIC = {
 SYNTAX = [
     "global",
     "private",
-
     "var",
     "delete",
-
     "if",
     "elseif",
     "else",
-
     "foriter",
     "by",
-
     "for",
     "from",
     "to",
     "step",
-
     "repeat",
     "until",
     "meet",
-
     "break",
     "continue",
-
     "function",
     "return",
-
     "include"
 ]
 BOOLEAN = [
